@@ -9,7 +9,12 @@
   :serial t
   :depends-on
   (:clack
-   :tiny-routes)
+   :tiny-routes
+   :jonathan)
   :components
   ((:file "package")
+   (:file "types")
+   (:file "users")
+   (:file "middleware")
+   (:file "routes")
    (:file "conduit")))

@@ -13,7 +13,4 @@
   (setf *http-server*
         (clack:clackup handler :port (or port 8080))))
 
-(defun handler (request)
-  (tiny:ok "TEST"))
-
-(start-http-server #'handler)
+(start-http-server app-routes)
