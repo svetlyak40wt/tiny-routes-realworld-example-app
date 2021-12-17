@@ -30,3 +30,26 @@
         (tiny:bad-request (error-response "Unparsable JSON")))
       (validation-error (c)
         (tiny:bad-request (error-response (error-message c)))))))
+
+(defun claims-get (request key &optional default)
+  (let ((claims (tiny:request-get request :claims)))
+    (getf claims key default)))
+
+(defun wrap-auth--internal (handler)
+  (tiny:wrap-request-mapper
+   handler
+   (lambda (request)
+     (let ((authorization (tiny:request-header request "authorization")))
+       (unless authorization
+         (signal-validation-error "Missing authorization header"))
+       (unless (uiop:string-prefix-p "Token " authorization)
+         (signal-validation-error "Missing Token"))
+       (let* ((token (second (uiop:split-string authorization)))
+              (claims (verify-auth-token token)))
+         (tiny:pipe request
+           (tiny:request-append :claims claims)
+           (tiny:request-append :token token)))))))
+
+(defun wrap-auth (handler)
+  ;; Wrap auth after path-info and HTTP method matching
+  (tiny:wrap-post-match-middleware handler #'wrap-auth--internal))

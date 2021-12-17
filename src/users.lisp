@@ -19,3 +19,8 @@
                             :bio bio :image image))
            (token (generate-auth-token user)))
       (%make-authenticated-user user token))))
+
+(defun users/current-user (id token)
+  (when (and id token)
+    (let* ((user (make-user 10 "test-user" "test@mail" (hash-encode-password "TEST"))))
+      (%make-authenticated-user user token))))

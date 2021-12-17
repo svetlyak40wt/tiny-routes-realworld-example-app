@@ -12,7 +12,7 @@
 (defun unprocessable-entity (body)
   (tiny:unprocessable-entity (error-response body)))
 
-(define-routes authentication-routes
+(define-routes public-user-routes
   (define-post "/api/users/login" (request)
     (let* ((json-body (json-body request))
            (user (getf json-body :|user|))
@@ -29,8 +29,19 @@
           (ok (list :|user| user))
           (unprocessable-entity "Unable to register user")))))
 
+(define-routes private-user-routes
+  (define-get "/api/user" (request)
+    (let ((id (claims-get request :|id| ""))
+          (token (tiny:request-get request :token)))
+      (let ((user (users/current-user id token)))
+        (if user
+            (ok (list :|user| user))
+            (not-found "No such user found"))))))
+
 (define-routes api-routes
-  authentication-routes
+  public-user-routes
+  (tiny:pipe private-user-routes
+    (wrap-auth))
   (define-route () (not-found "NOT_FOUND")))
 
 (define-routes app-routes
