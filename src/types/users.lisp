@@ -128,6 +128,7 @@
       (jojo:write-key-value "bio" (or bio :null))
       (jojo:write-key-value "image" (or image :null)))))
 
+;; user-update-rendition
 (defclass user-update-rendition ()
   ((username
     :initarg :username

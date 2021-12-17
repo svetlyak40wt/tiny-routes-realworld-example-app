@@ -48,9 +48,38 @@
           (ok (list :|user| updated-user))
           (unprocessable-entity "Unable to update user")))))
 
+(define-routes public-profile-routes
+  (define-get "/api/profiles/:username" (request)
+    (let* ((id (claims-get request :|id| ""))
+           (username (tiny:request-path-param request "username" "none"))
+           (profile (profiles/profile-by-username id username)))
+      (if profile
+          (ok (list :|profile| profile))
+          (not-found "No such profile found")))))
+
+(define-routes private-profile-routes
+  (define-post "/api/profiles/:username/follow" (request)
+    (let* ((id (claims-get request :|id| ""))
+           (username (tiny:request-path-param request "username" "none"))
+           (profile (profiles/follow-profile id username)))
+      (if profile
+          (ok (list :|profile| profile))
+          (not-found "No such profile found"))))
+
+  (define-delete "/api/profiles/:username/follow" (request)
+    (let* ((id (claims-get request :|id| ""))
+           (username (tiny:request-path-param request "username" "none"))
+           (profile (profiles/unfollow-profile id username)))
+      (if profile
+          (ok (list :|profile| profile))
+          (not-found "No such profile found")))))
+
 (define-routes api-routes
   public-user-routes
   (tiny:pipe private-user-routes
+    (wrap-auth))
+  public-profile-routes
+  (tiny:pipe private-profile-routes
     (wrap-auth))
   (define-route () (not-found "NOT_FOUND")))
 

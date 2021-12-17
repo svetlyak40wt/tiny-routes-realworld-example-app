@@ -27,8 +27,12 @@
    (:module "types"
     :serial t
     :components ((:file "mixins")
-                 (:file "users")))
-   (:file "users")
+                 (:file "users")
+                 (:file "profiles")))
+   (:module "services"
+    :serial t
+    :components ((:file "users")
+                 (:file "profiles")))
    (:file "middleware")
    (:file "routes")
    (:file "conduit")))

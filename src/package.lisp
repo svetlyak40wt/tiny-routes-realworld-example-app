@@ -3,6 +3,7 @@
 (defpackage #:conduit
   (:use #:cl)
   (:import-from #:tiny-routes
+                #:define-delete
                 #:define-get
                 #:define-post
                 #:define-put
