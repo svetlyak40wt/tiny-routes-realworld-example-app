@@ -5,6 +5,7 @@
   (:import-from #:tiny-routes
                 #:define-get
                 #:define-post
+                #:define-put
                 #:define-route
                 #:define-routes
                 #:routes)

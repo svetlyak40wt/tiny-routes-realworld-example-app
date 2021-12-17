@@ -22,5 +22,16 @@
 
 (defun users/current-user (id token)
   (when (and id token)
-    (let* ((user (make-user 10 "test-user" "test@mail" (hash-encode-password "TEST"))))
+    (let* ((user (make-user id "test-user" "test@mail" (hash-encode-password "TEST"))))
+      (%make-authenticated-user user token))))
+
+(defun users/update-user (id token rendition)
+  (check-type rendition user-update-rendition)
+  (with-slots (username email password bio image) rendition
+    (let* ((password-hash (hash-encode-password (or password "TEST")))
+           (user (make-user id
+                            (or username "test-user")
+                            (or email "test@mail")
+                            password-hash
+                            :bio bio :image image)))
       (%make-authenticated-user user token))))

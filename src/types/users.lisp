@@ -122,8 +122,52 @@
 (defmethod jojo:%to-json ((object authenticated-user))
   (with-slots (email token username bio image) object
     (jojo:with-object
-        (jojo:write-key-value "email" email)
+      (jojo:write-key-value "email" email)
       (jojo:write-key-value "token" token)
       (jojo:write-key-value "username" username)
       (jojo:write-key-value "bio" (or bio :null))
       (jojo:write-key-value "image" (or image :null)))))
+
+(defclass user-update-rendition ()
+  ((username
+    :initarg :username
+    :type (or null string)
+    :reader user-update-username)
+   (email
+    :initarg :email
+    :type (or null string)
+    :reader user-update-email)
+   (password
+    :initarg :password
+    :type (or null string)
+    :reader user-update-password)
+   (bio
+    :initarg :bio
+    :type (or null string)
+    :reader user-update-bio)
+   (image
+    :initarg :image
+    :type (or null string)
+    :reader user-update-image))
+  (:documentation "A representation of a user update rendition."))
+
+(defun make-user-update-rendition (&optional username email password bio image)
+  (make-instance 'user-update-rendition
+                 :username (and username (check-username username))
+                 :email (and email (check-email email))
+                 :password (and password (check-password password))
+                 :bio bio
+                 :image image))
+
+(defun parse-user-update-rendition (options)
+  (make-user-update-rendition
+   (getf options :|username|)
+   (getf options :|email|)
+   (getf options :|password|)
+   (getf options :|bio|)
+   (getf options :|image|)))
+
+(defmethod print-object ((object user-update-rendition) stream)
+  (print-unreadable-object (object stream :type t :identity t)
+    (with-slots (username email) object
+      (format stream ":username ~s :email ~s" username email))))

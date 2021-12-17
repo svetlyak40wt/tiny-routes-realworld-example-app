@@ -31,12 +31,22 @@
 
 (define-routes private-user-routes
   (define-get "/api/user" (request)
-    (let ((id (claims-get request :|id| ""))
-          (token (tiny:request-get request :token)))
-      (let ((user (users/current-user id token)))
-        (if user
-            (ok (list :|user| user))
-            (not-found "No such user found"))))))
+    (let* ((id (claims-get request :|id| ""))
+           (token (tiny:request-get request :token))
+           (user (users/current-user id token)))
+      (if user
+          (ok (list :|user| user))
+          (not-found "No such user found"))))
+
+  (define-put "/api/users" (request)
+    (let* ((id (claims-get request :|id| ""))
+           (token (tiny:request-get request :token))
+           (json-body (json-body request))
+           (rendition (parse-user-update-rendition (getf json-body :|user|)))
+           (updated-user (users/update-user id token rendition)))
+      (if updated-user
+          (ok (list :|user| updated-user))
+          (unprocessable-entity "Unable to update user")))))
 
 (define-routes api-routes
   public-user-routes
