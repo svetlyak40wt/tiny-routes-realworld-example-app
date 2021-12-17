@@ -22,3 +22,11 @@
      (tiny:pipe response
        (tiny:application/json-response)
        (tiny:body-mapper-response #'jojo:to-json)))))
+
+(defun wrap-condition (handler)
+  (lambda (request)
+    (handler-case (funcall handler request)
+      (jojo:<jonathan-error> ()
+        (tiny:bad-request (error-response "Unparsable JSON")))
+      (validation-error (c)
+        (tiny:bad-request (error-response (error-message c)))))))

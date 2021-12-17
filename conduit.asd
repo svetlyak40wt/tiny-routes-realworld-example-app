@@ -8,12 +8,26 @@
   :pathname "src/"
   :serial t
   :depends-on
-  (:clack
-   :tiny-routes
-   :jonathan)
+  (:alexandria
+   :cl-base64
+   :cl-bcrypt
+   :cl-ppcre
+   :clack
+   :ironclad
+   :jonathan
+   :local-time
+   :tiny-routes)
   :components
   ((:file "package")
-   (:file "types")
+   (:file "errors")
+   (:file "util")
+   (:file "jwt")
+   (:file "auth")
+   (:file "validators")
+   (:module "types"
+    :serial t
+    :components ((:file "mixins")
+                 (:file "users")))
    (:file "users")
    (:file "middleware")
    (:file "routes")

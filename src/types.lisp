@@ -1,5 +1,52 @@
 (in-package :conduit)
 
+(defclass user-registration-rendition ()
+  ((email
+    :initarg :email
+    :type string
+    :reader user-registration-email)
+   (username
+    :initarg :username
+    :type string
+    :reader user-registration-username)
+   (password
+    :initarg :password
+    :type string
+    :reader user-registration-password)
+   (bio
+    :initarg :bio
+    :type (or null string)
+    :reader user-registration-bio)
+   (image
+    :initarg :image
+    :type (or null string)
+    :reader user-registration-image))
+  (:documentation "A representation of a user registration rendition."))
+
+(defun make-user-registration-rendition (email username password &optional bio image)
+  (check-type email string)
+  (check-type username string)
+  (check-type password string)
+  (make-instance 'user-registration-rendition
+                 :email email
+                 :username username
+                 :password password
+                 :bio bio
+                 :image image))
+
+(defun parse-user-registration-rendition (options)
+  (make-user-registration-rendition
+   (getf options :|email|)
+   (getf options :|username|)
+   (getf options :|password|)
+   (getf options :|bio|)
+   (getf options :|image|)))
+
+(defmethod print-object ((object user-registration-rendition) stream)
+  (print-unreadable-object (object stream :type t :identity t)
+    (with-slots (email username) object
+      (format stream ":email ~s :username ~s " email username))))
+
 (defclass user ()
   ((email
     :initarg :email

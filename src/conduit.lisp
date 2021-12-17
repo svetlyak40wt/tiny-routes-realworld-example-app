@@ -13,4 +13,9 @@
   (setf *http-server*
         (clack:clackup handler :port (or port 8080))))
 
-(start-http-server app-routes)
+(defun start-app ()
+  (initialize-auth "to-be-replaced-with-secret-key-text")
+  (start-http-server app-routes)
+  t)
+
+(start-app)
