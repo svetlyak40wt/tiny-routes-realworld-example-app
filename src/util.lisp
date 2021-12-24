@@ -13,3 +13,10 @@
 
 (defun unix-now ()
   (local-time:timestamp-to-unix (local-time:now)))
+
+(defun parse-boolean (boolean-designator)
+  (typecase boolean-designator
+    (boolean boolean-designator)
+    (fixnum (not (zerop boolean-designator)))
+    (string (alexandria:starts-with #\t boolean-designator :test #'char= :key #'char-downcase))
+    (otherwise boolean-designator)))

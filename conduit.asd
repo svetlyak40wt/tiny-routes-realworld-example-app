@@ -12,6 +12,7 @@
    :cl-base64
    :cl-bcrypt
    :cl-ppcre
+   :cl-slug
    :clack
    :ironclad
    :jonathan
@@ -24,15 +25,12 @@
    (:file "jwt")
    (:file "auth")
    (:file "validators")
-   (:module "types"
-    :serial t
-    :components ((:file "mixins")
-                 (:file "users")
-                 (:file "profiles")))
+   (:file "types")
    (:module "services"
     :serial t
     :components ((:file "users")
-                 (:file "profiles")))
+                 (:file "profiles")
+                 (:file "articles")))
    (:file "middleware")
    (:file "routes")
    (:file "conduit")))

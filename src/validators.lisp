@@ -1,15 +1,22 @@
 (in-package :conduit)
 
 (defparameter *password-min-length* 8)
-
 (defparameter *password-max-length* 255)
 
 (defparameter *username-min-length* 2)
-
 (defparameter *username-max-length* 50)
+
+(defparameter *article-title-min-length* 8)
+(defparameter *article-title-max-length* 64)
+
+(defparameter *article-description-min-length* 8)
+(defparameter *article-description-max-length* 512)
 
 (defparameter *email-regex*
   (cl-ppcre:create-scanner "^[a-z0-9.]+\@[a-z0-9.-]+$"))
+
+(defparameter *slug-regex*
+  (cl-ppcre:create-scanner "^[A-Za-z0-9.-]{4,}"))
 
 (defun check-type* (value name type)
   (unless (typep value type)
@@ -52,3 +59,21 @@
 
 (defun check-id (value &optional (name "id"))
   (check-integer value name))
+
+(defun check-profile (value &optional (name "profile"))
+  (check-type* value name 'profile))
+
+(defun check-slug (value &optional (name "slug"))
+  (check-regex value name *slug-regex*))
+
+(defun check-title (value &optional (name "title"))
+  (check-string-length-between value name *article-title-min-length* *article-title-max-length*))
+
+(defun check-description (value &optional (name "description"))
+  (check-string-length-between value name *article-description-min-length* *article-description-max-length*))
+
+(defun check-article-body (value &optional (name "body"))
+  (check-string value name))
+
+(defun check-comment-body (value &optional (name "body"))
+  (check-string value name))

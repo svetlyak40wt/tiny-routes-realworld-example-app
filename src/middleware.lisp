@@ -53,3 +53,22 @@
 (defun wrap-auth (handler)
   ;; Wrap auth after path-info and HTTP method matching
   (tiny:wrap-post-match-middleware handler #'wrap-auth--internal))
+
+(defun query-params (request)
+  (tiny:request-get request :query-params))
+
+(defun parse-query-params (query-string)
+  (let (params)
+    (dolist (pair (uiop:split-string query-string :separator '(#\&)))
+      (destructuring-bind (&optional key value &rest rest) (uiop:split-string pair :separator '(#\=))
+        (when (and key value (null rest))
+          (push value params)
+          (push (intern key :keyword) params))))
+    params))
+
+(defun wrap-query-params (handler)
+  (tiny:wrap-request-mapper
+   handler
+   (lambda (request)
+     (let ((params (parse-query-params (tiny:request-query-string request))))
+       (tiny:request-append request :query-params params)))))

@@ -74,13 +74,64 @@
           (ok (list :|profile| profile))
           (not-found "No such profile found")))))
 
+(define-routes public-article-routes
+  (define-get "/api/articles/:slug" (request)
+    (let* ((slug (tiny:request-path-param request "slug"))
+           (article (articles/article-by-slug slug)))
+      (if article
+          (ok (list :|article| article))
+          (not-found "No such article found"))))
+
+  (define-get "/api/articles" (request)
+    (let* ((params (query-params request))
+           (article-query (parse-article-query params))
+           (articles (articles/get-articles article-query)))
+      (ok (list :|articles| articles :|article-query| article-query))))
+
+  (define-get "/api/articles/:slug/comments" (request)
+    (let* ((slug (tiny:request-path-param request "slug"))
+           (comments (articles/get-comments-by-article-slug slug)))
+      (ok (list :|comments| comments)))))
+
+(define-routes private-article-routes
+  (define-get "/api/articles/feed" (request)
+    (let* ((id (claims-get request :|id| ""))
+           (articles (articles/article-feed id)))
+      (ok (list :|articles| articles))))
+
+  (define-put "/api/articles/:slug" (request)
+    (let* ((id (claims-get request :|id| ""))
+           (slug (tiny:request-path-param request "slug"))
+           (rendition (parse-article-update-rendition (getf (json-body request) :|article|)))
+           (article (articles/update-article id slug rendition)))
+      (ok (list :|article| article))))
+
+  (define-post "/api/articles" (request)
+    (let* ((id (claims-get request :|id| ""))
+           (rendition (parse-article-rendition (getf (json-body request) :|article|)))
+           (article (articles/create-article id rendition)))
+      (ok (list :|article| article))))
+
+  (define-delete "/api/articles/:slug" (request)
+    (let* ((id (claims-get request :|id| ""))
+           (slug (tiny:request-path-param request "slug"))
+           (article (articles/delete-article id slug)))
+      (ok (list :|article| article)))))
+
 (define-routes api-routes
   public-user-routes
+  public-profile-routes
+
   (tiny:pipe private-user-routes
     (wrap-auth))
-  public-profile-routes
   (tiny:pipe private-profile-routes
     (wrap-auth))
+  (tiny:pipe private-article-routes
+    (wrap-auth))
+
+  (tiny:pipe public-article-routes
+    (wrap-query-params))
+
   (define-route () (not-found "NOT_FOUND")))
 
 (define-routes app-routes
