@@ -91,7 +91,11 @@
   (define-get "/api/articles/:slug/comments" (request)
     (let* ((slug (tiny:request-path-param request "slug"))
            (comments (articles/get-comments-by-article-slug slug)))
-      (ok (list :|comments| comments)))))
+      (ok (list :|comments| comments))))
+
+  (define-get "/api/tags" ()
+    (let ((tags (articles/get-tags)))
+      (ok (list :|tags| tags)))))
 
 (define-routes private-article-routes
   (define-get "/api/articles/feed" (request)
@@ -116,7 +120,33 @@
     (let* ((id (claims-get request :|id| ""))
            (slug (tiny:request-path-param request "slug"))
            (article (articles/delete-article id slug)))
-      (ok (list :|article| article)))))
+      (ok (list :|article| article))))
+
+  (define-post "/api/articles/:slug/comments" (request)
+    (let* ((id (claims-get request :|id| ""))
+           (slug (tiny:request-path-param request "slug"))
+           (rendition (parse-comment-rendition (getf (json-body request) :|comment|)))
+           (comment (articles/create-comment id slug rendition)))
+      (ok (list :|comment| comment))))
+
+  (define-delete "/api/articles/:slug/comments/:comment-id" (request)
+    (let* ((id (claims-get request :|id| ""))
+           (slug (tiny:request-path-param request "slug"))
+           (comment-id (parse-integer (tiny:request-path-param request "comment-id")))
+           (comment (articles/delete-comment id slug comment-id)))
+      (ok (list :|comment| comment))))
+
+  (define-post "/api/articles/:slug/favorite" (request)
+    (let* ((id (claims-get request :|id| ""))
+           (slug (tiny:request-path-param request "slug"))
+           (favorited-article (articles/favorite-article id slug)))
+      (ok (list :|article| favorited-article))))
+
+  (define-post "/api/articles/:slug/unfavorite" (request)
+    (let* ((id (claims-get request :|id| ""))
+           (slug (tiny:request-path-param request "slug"))
+           (unfavorited-article (articles/unfavorite-article id slug)))
+      (ok (list :|article| unfavorited-article)))))
 
 (define-routes api-routes
   public-user-routes

@@ -331,7 +331,7 @@
 (defclass comment (entity-mixin)
   ((author :initarg :author :type profile :reader comment-author)
    (body :initarg :body :type string :reader comment-body))
-  (:documentation "A representation of a comment"))
+  (:documentation "A representation of a comment."))
 
 (defun make-comment (id author &key (body "") created-at updated-at)
   (let* ((created-at (or created-at (local-time:now)))
@@ -365,3 +365,18 @@
       (jojo:write-key-value "createdAt" created-at)
       (jojo:write-key-value "updatedAt" updated-at)
       (jojo:write-key-value "author" author))))
+
+(defclass comment-rendition ()
+  ((body :initarg :body :type string :reader comment-rendition-body))
+  (:documentation "A representation of a comment rendition."))
+
+(defun make-comment-rendition (body)
+  (make-instance 'comment-rendition :body (check-comment-body body)))
+
+(defun parse-comment-rendition (options)
+  (make-comment-rendition (getf options :|body|)))
+
+(defmethod print-object ((object comment-rendition) stream)
+  (print-unreadable-object (object stream :type t :identity t)
+    (with-slots (body) object
+      (format stream ":body ~s" (subseq body 0 (min 10 (length body)))))))

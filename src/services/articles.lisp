@@ -41,3 +41,27 @@
   (let ((author (make-profile "somebody")))
     (list (make-comment 101 author :body "Who said that?")
           (make-comment 102 author :body "It was me!"))))
+
+(defun articles/create-comment (id slug rendition)
+  (declare (ignore slug))
+  (let ((author (profiles/profile-by-id id))
+        (body (comment-rendition-body rendition)))
+    (make-comment 103 author :body body)))
+
+(defun articles/delete-comment (id slug comment-id)
+  (declare (ignore slug))
+  (let ((author (profiles/profile-by-id id)))
+    (make-comment comment-id author :body "Test")))
+
+(defun articles/favorite-article (id slug)
+  (declare (ignore id))
+  (let ((author (make-profile "jruiz")))
+    (list (make-article 19 author slug "another title" "description" :body "" :favorited t))))
+
+(defun articles/unfavorite-article (id slug)
+  (declare (ignore id))
+  (let ((author (make-profile "jruiz")))
+    (list (make-article 19 author slug "another title" "description" :body "" :favorited nil))))
+
+(defun articles/get-tags ()
+  (list "reactjs" "angularjs"))

@@ -4,6 +4,9 @@
   (declare (ignore id))
   (and username (make-profile username)))
 
+(defun profiles/profile-by-id (id)
+  (and id (make-profile "jruiz")))
+
 (defun profiles/follow-profile (id username)
   (declare (ignore id))
   (and username (make-profile username :following t)))
