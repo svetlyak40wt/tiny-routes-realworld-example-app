@@ -1,16 +1,27 @@
-(in-package :conduit)
+;;;; profiles.lisp
+(in-package :cl-user)
+(uiop:define-package :conduit.services.profiles
+  (:use :cl)
+  (:import-from :conduit.types
+                #:make-profile)
+  (:export #:profile-by-username
+           #:profile-by-id
+           #:follow-profile
+           #:unfollow-profile))
 
-(defun profiles/profile-by-username (id username)
+(in-package :conduit.services.profiles)
+
+(defun profile-by-username (id username)
   (declare (ignore id))
   (and username (make-profile username)))
 
-(defun profiles/profile-by-id (id)
+(defun profile-by-id (id)
   (and id (make-profile "jruiz")))
 
-(defun profiles/follow-profile (id username)
+(defun follow-profile (id username)
   (declare (ignore id))
   (and username (make-profile username :following t)))
 
-(defun profiles/unfollow-profile (id username)
+(defun unfollow-profile (id username)
   (declare (ignore id))
   (and username (make-profile username :following nil)))

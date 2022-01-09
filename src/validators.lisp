@@ -1,4 +1,24 @@
-(in-package :conduit)
+;;;; validators.lisp
+(in-package :cl-user)
+(uiop:define-package :conduit.validators
+  (:use :cl)
+  (:import-from :conduit.errors
+                #:signal-validation-error)
+  (:export #:check-type*
+           #:check-string
+           #:check-integer
+           #:check-email
+           #:check-username
+           #:check-password
+           #:check-id
+           #:check-profile
+           #:check-slug
+           #:check-title
+           #:check-description
+           #:check-article-body
+           #:check-comment-body))
+
+(in-package :conduit.validators)
 
 (defparameter *password-min-length* 8)
 (defparameter *password-max-length* 255)

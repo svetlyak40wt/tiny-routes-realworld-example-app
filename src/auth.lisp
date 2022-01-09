@@ -1,4 +1,19 @@
-(in-package :conduit)
+;;;; auth.lisp
+(in-package :cl-user)
+(uiop:define-package :conduit.auth
+  (:use :cl :conduit.jwt)
+  (:import-from :conduit.types
+                #:id
+                #:user)
+  (:import-from :conduit.util
+                #:unix-now)
+  (:export #:hash-encode-password
+           #:valid-password-p
+           #:generate-auth-token
+           #:verify-auth-token
+           #:initialize-auth))
+
+(in-package :conduit.auth)
 
 (defvar *key* nil
   "The private key used to sign auth tokens.")
@@ -13,6 +28,7 @@
   (bcrypt:password= password password-hash))
 
 (defun generate-auth-token (user)
+  (check-type user user)
   (let ((headers (list :|typ| "JWT" :|alg| "HS256"
                        :|exp| (+ (unix-now) *auth-token-duration*)))
         (claims (list :|id| (id user))))
@@ -22,4 +38,5 @@
   (verify-jwt *key* token))
 
 (defun initialize-auth (key)
+  (check-type key string)
   (setf *key* (ironclad:ascii-string-to-byte-array key)))

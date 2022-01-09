@@ -1,27 +1,46 @@
-(in-package :conduit)
+;;;; articles.lisp
+(in-package :cl-user)
+(uiop:define-package :conduit.services.articles
+  (:use :cl :conduit.types)
+  (:import-from :conduit.services.profiles
+                #:profile-by-id)
+  (:export #:get-articles
+           #:article-by-slug
+           #:article-feed
+           #:create-article
+           #:update-article
+           #:delete-article
+           #:get-comments-by-article-slug
+           #:create-comment
+           #:delete-comment
+           #:favorite-article
+           #:unfavorite-article
+           #:get-tags))
 
-(defun articles/get-articles (article-query)
+(in-package :conduit.services.articles)
+
+(defun get-articles (article-query)
   (declare (ignore article-query))
   (let ((author (make-profile "jruiz")))
     (list (make-article 19 author "slug" "another title" "description" :body ""))))
 
-(defun articles/article-by-slug (slug)
+(defun article-by-slug (slug)
   (let ((author (make-profile "jruiz")))
     (list (make-article 19 author slug "another title" "description" :body ""))))
 
-(defun articles/article-feed (id)
+(defun article-feed (id)
   (declare (ignore id))
   (let ((author (make-profile "jruiz")))
     (list (make-article 19 author "slug" "another title" "description" :body ""))))
 
-(defun articles/create-article (id rendition)
+(defun create-article (id rendition)
   (declare (ignore id))
   (with-slots (title description body tags) rendition
     (let ((author (make-profile "jruiz"))
           (slug (cl-slug:slugify title)))
       (make-article 21 author slug title description :body body :tags tags))))
 
-(defun articles/update-article (id slug rendition)
+(defun update-article (id slug rendition)
   (declare (ignore id slug))
   (with-slots (title description body) rendition
     (let* ((author (make-profile "jruiz"))
@@ -31,37 +50,37 @@
                     (or description "some description")
                     :body (or body "some body")))))
 
-(defun articles/delete-article (id slug)
+(defun delete-article (id slug)
   (declare (ignore id))
   (let ((author (make-profile "jruiz")))
     (list (make-article 19 author slug "another title" "description" :body ""))))
 
-(defun articles/get-comments-by-article-slug (slug)
+(defun get-comments-by-article-slug (slug)
   (declare (ignore slug))
   (let ((author (make-profile "somebody")))
     (list (make-comment 101 author :body "Who said that?")
           (make-comment 102 author :body "It was me!"))))
 
-(defun articles/create-comment (id slug rendition)
+(defun create-comment (id slug rendition)
   (declare (ignore slug))
-  (let ((author (profiles/profile-by-id id))
-        (body (comment-rendition-body rendition)))
+  (let ((author (profile-by-id id))
+        (body (body rendition)))
     (make-comment 103 author :body body)))
 
-(defun articles/delete-comment (id slug comment-id)
+(defun delete-comment (id slug comment-id)
   (declare (ignore slug))
-  (let ((author (profiles/profile-by-id id)))
+  (let ((author (profile-by-id id)))
     (make-comment comment-id author :body "Test")))
 
-(defun articles/favorite-article (id slug)
+(defun favorite-article (id slug)
   (declare (ignore id))
   (let ((author (make-profile "jruiz")))
     (list (make-article 19 author slug "another title" "description" :body "" :favorited t))))
 
-(defun articles/unfavorite-article (id slug)
+(defun unfavorite-article (id slug)
   (declare (ignore id))
   (let ((author (make-profile "jruiz")))
     (list (make-article 19 author slug "another title" "description" :body "" :favorited nil))))
 
-(defun articles/get-tags ()
+(defun get-tags ()
   (list "reactjs" "angularjs"))

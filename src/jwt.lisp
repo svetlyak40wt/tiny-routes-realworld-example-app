@@ -1,4 +1,16 @@
-(in-package :conduit)
+;;;; jwt.lisp
+(in-package :cl-user)
+(uiop:define-package :conduit.jwt
+  (:use :cl)
+  (:import-from :conduit.errors
+                #:signal-validation-error)
+  (:import-from :conduit.util
+                #:unix-now)
+  (:export #:make-jwt
+           #:parse-jwt
+           #:verify-jwt))
+
+(in-package :conduit.jwt)
 
 (defun add-padding (input)
   (let ((mod (mod (length input) 4)))

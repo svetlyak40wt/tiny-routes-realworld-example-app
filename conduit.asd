@@ -19,13 +19,12 @@
    :local-time
    :tiny-routes)
   :components
-  ((:file "package")
-   (:file "errors")
+  ((:file "errors")
    (:file "util")
-   (:file "jwt")
-   (:file "auth")
    (:file "validators")
    (:file "types")
+   (:file "jwt")
+   (:file "auth")
    (:module "services"
     :serial t
     :components ((:file "users")

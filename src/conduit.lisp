@@ -1,3 +1,13 @@
+;;;; conduit.lisp
+(in-package :cl-user)
+(uiop:define-package :conduit
+  (:use :cl)
+  (:import-from :clack)
+  (:import-from :conduit.auth
+                #:initialize-auth)
+  (:import-from :conduit.routes
+                #:app-routes))
+
 (in-package :conduit)
 
 (defvar *http-server* nil

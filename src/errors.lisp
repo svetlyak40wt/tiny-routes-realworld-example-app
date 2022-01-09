@@ -1,4 +1,13 @@
-(in-package :conduit)
+;;;; errors.lisp
+(in-package :cl-user)
+(uiop:define-package :conduit.errors
+  (:use :cl)
+  (:export #:app-error
+           #:validation-error
+           #:signal-validation-error
+           #:error-message))
+
+(in-package :conduit.errors)
 
 (define-condition app-error (simple-error)
   ()
@@ -12,8 +21,3 @@
   (error 'validation-error
          :format-control format-control
          :format-arguments format-arguments))
-
-(defun error-message (condition)
-  (apply #'format nil
-         (simple-condition-format-control condition)
-         (simple-condition-format-arguments condition)))

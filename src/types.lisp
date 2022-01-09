@@ -1,8 +1,77 @@
-(in-package :conduit)
+;;;; types.lisp
+(in-package :cl-user)
+(uiop:define-package :conduit.types
+  (:use :cl)
+  (:import-from :conduit.util
+                #:format-timestamp
+                #:parse-timestamp)
+  (:import-from :conduit.validators
+                #:check-username
+                #:check-email
+                #:check-password
+                #:check-id
+                #:check-article-body
+                #:check-description
+                #:check-profile
+                #:check-slug
+                #:check-comment-body
+                #:check-title)
+  (:export #:id
+           #:created-at
+           #:updated-at
+           #:token)
+  (:export #:user-registration-rendition
+           #:username
+           #:email
+           #:password
+           #:bio
+           #:image
+           #:make-user-registration-rendition
+           #:parse-user-registration-rendition
+           #:user
+           #:password-hash
+           #:make-user
+           #:parse-user
+           #:authenticated-user
+           #:make-authenticated-user
+           #:user-update-rendition
+           #:make-user-update-rendition
+           #:parse-user-update-rendition)
+  (:export #:profile
+           #:following
+           #:make-profile
+           #:parse-profile
+           #:article
+           #:slug
+           #:author
+           #:title
+           #:description
+           #:body
+           #:tags
+           #:favorited
+           #:favorites-count
+           #:make-article
+           #:article-query
+           #:limit
+           #:offset
+           #:make-article-query
+           #:parse-article-query
+           #:article-rendition
+           #:make-article-rendition
+           #:parse-article-rendition
+           #:article-update-rendition
+           #:make-article-update-rendition
+           #:parse-article-update-rendition)
+  (:export #:comment
+           #:make-comment
+           #:parse-comment
+           #:comment-rendition
+           #:make-comment-rendition
+           #:parse-comment-rendition))
 
-;;;;;;;;;;;;
-;; mixins ;;
-;;;;;;;;;;;;
+(in-package :conduit.types)
+
+;;; mixins
 (defclass entity-mixin ()
   ((id :initarg :id :type id :reader id)
    (created-at :initarg :created-at :type timestamp :reader created-at)
@@ -13,15 +82,13 @@
   ((token :initarg :token :type string :reader auth-token))
   (:documentation "A mixin for authenticated objects."))
 
-;;;;;;;;;;;
-;; users ;;
-;;;;;;;;;;;
+;;; users
 (defclass user-registration-rendition ()
-  ((username :initarg :username :type string :reader user-registration-username)
-   (email :initarg :email :type string :reader user-registration-email)
-   (password :initarg :password :type string :reader user-registration-password)
-   (bio :initarg :bio :type (or null string) :reader user-registration-bio)
-   (image :initarg :image :type (or null string) :reader user-registration-image))
+  ((username :initarg :username :type string :reader username)
+   (email :initarg :email :type string :reader email)
+   (password :initarg :password :type string :reader password)
+   (bio :initarg :bio :type (or null string) :reader bio)
+   (image :initarg :image :type (or null string) :reader image))
   (:documentation "A representation of a user registration rendition."))
 
 (defun make-user-registration-rendition (username email password &optional bio image)
@@ -45,13 +112,12 @@
     (with-slots (username email) object
       (format stream ":username ~s :email ~s" username email))))
 
-;; user
 (defclass user (entity-mixin)
-  ((username :initarg :username :type string :reader user-username)
-   (email :initarg :email :type string :reader user-email)
-   (password-hash :initarg :password-hash :type string :reader user-password-hash)
-   (bio :initarg :bio :initform nil :type (or null string) :reader user-bio)
-   (image :initarg :image :initform nil :type (or null string) :reader user-image))
+  ((username :initarg :username :type string :reader username)
+   (email :initarg :email :type string :reader email)
+   (password-hash :initarg :password-hash :type string :reader password-hash)
+   (bio :initarg :bio :initform nil :type (or null string) :reader bio)
+   (image :initarg :image :initform nil :type (or null string) :reader image))
   (:documentation "A representation of a user."))
 
 (defun make-user (id username email password-hash &key bio image created-at updated-at)
@@ -111,11 +177,11 @@
       (jojo:write-key-value "image" (or image :null)))))
 
 (defclass user-update-rendition ()
-  ((username :initarg :username :type (or null string) :reader user-update-username)
-   (email :initarg :email :type (or null string) :reader user-update-email)
-   (password :initarg :password :type (or null string) :reader user-update-password)
-   (bio :initarg :bio :type (or null string) :reader user-update-bio)
-   (image :initarg :image :type (or null string) :reader user-update-image))
+  ((username :initarg :username :type (or null string) :reader username)
+   (email :initarg :email :type (or null string) :reader email)
+   (password :initarg :password :type (or null string) :reader password)
+   (bio :initarg :bio :type (or null string) :reader bio)
+   (image :initarg :image :type (or null string) :reader image))
   (:documentation "A representation of a user update rendition."))
 
 (defun make-user-update-rendition (&optional username email password bio image)
@@ -139,15 +205,12 @@
     (with-slots (username email) object
       (format stream ":username ~s :email ~s" username email))))
 
-;;;;;;;;;;;;;;
-;; profiles ;;
-;;;;;;;;;;;;;;
-
+;;; profiles
 (defclass profile ()
-  ((username :initarg :username :type string :reader profile-username)
-   (bio :initarg :bio :initform nil :type (or null string) :reader profile-bio)
-   (image :initarg :image :initform nil :type (or null string) :reader profile-image)
-   (following :initarg :following :initform nil :type boolean :reader profile-following))
+  ((username :initarg :username :type string :reader username)
+   (bio :initarg :bio :initform nil :type (or null string) :reader bio)
+   (image :initarg :image :initform nil :type (or null string) :reader image)
+   (following :initarg :following :initform nil :type boolean :reader following))
   (:documentation "A representation of a profile."))
 
 (defun make-profile (username &key bio image following)
@@ -177,18 +240,16 @@
       (jojo:write-key-value "image" (or image :null))
       (jojo:write-key-value "following" (or following :false)))))
 
-;;;;;;;;;;;;;;
-;; articles ;;
-;;;;;;;;;;;;;;
+;;; articles
 (defclass article (entity-mixin)
-  ((slug :initarg :slug :type string :reader article-slug)
-   (author :initarg :author :type profile :reader article-author)
-   (title :initarg :title :type string :reader article-title)
-   (description :initarg :description :type string :reader article-description)
-   (body :initarg :body :type string :reader article-body)
-   (tags :initarg :tags :type list :reader article-tags)
-   (favorited :initarg :favorited :initform nil :type boolean :reader article-favorited)
-   (favorites-count :initarg :favorites-count :initform 0 :type fixnum :reader article-favorites-count))
+  ((slug :initarg :slug :type string :reader slug)
+   (author :initarg :author :type profile :reader author)
+   (title :initarg :title :type string :reader title)
+   (description :initarg :description :type string :reader description)
+   (body :initarg :body :type string :reader body)
+   (tags :initarg :tags :type list :reader tags)
+   (favorited :initarg :favorited :initform nil :type boolean :reader favorited)
+   (favorites-count :initarg :favorites-count :initform 0 :type fixnum :reader favorites-count))
   (:documentation "A representation of an article."))
 
 (defun make-article (id author slug title description
@@ -213,7 +274,7 @@
   (print-unreadable-object (object stream :type t :identity t)
     (with-slots (id title author) object
       (format stream ":id ~s :title ~s :author-name ~s"
-              id title (profile-username author)))))
+              id title (username author)))))
 
 (defmethod jojo:%to-json ((timestamp local-time:timestamp))
   (jojo:%to-json (format-timestamp timestamp)))
@@ -235,11 +296,11 @@
       (jojo:write-key-value "author" author))))
 
 (defclass article-query ()
-  ((tag :initarg :tag :type (or null string) :reader article-query-tag)
-   (author :initarg :author :type (or null string) :reader article-query-author)
-   (favorited :initarg :favorited :type (or null string) :reader article-query-favorited)
-   (limit :initarg :limit :type fixnum :reader article-query-limit)
-   (offset :initarg :offset :type fixnum :reader article-query-offset))
+  ((tag :initarg :tag :type (or null string) :reader tag)
+   (author :initarg :author :type (or null string) :reader author)
+   (favorited :initarg :favorited :type (or null string) :reader favorited)
+   (limit :initarg :limit :type fixnum :reader limit)
+   (offset :initarg :offset :type fixnum :reader offset))
   (:documentation "A representation of an article query"))
 
 (defun make-article-query (&key tag author favorited (limit 20) (offset 0))
@@ -274,10 +335,10 @@
       (jojo:write-key-value "offset" offset))))
 
 (defclass article-rendition ()
-  ((title :initarg :title :type string :reader article-rendition-title)
-   (description :initarg :description :type string :reader article-rendition-description)
-   (body :initarg :body :type string :reader article-rendition-body)
-   (tags :initarg :tags :type string :reader article-rendition-tags))
+  ((title :initarg :title :type string :reader title)
+   (description :initarg :description :type string :reader description)
+   (body :initarg :body :type string :reader body)
+   (tags :initarg :tags :type string :reader tags))
   (:documentation "A representation of an article rendition."))
 
 (defun make-article-rendition (title description body tags)
@@ -301,10 +362,9 @@
       (format stream ":title ~s :description ~s" title description))))
 
 (defclass article-update-rendition ()
-  ((title :initarg :title :type (or null string) :reader article-update-rendition-title)
-   (description :initarg :description :type (or null string)
-                :reader article-update-rendition-description)
-   (body :initarg :body :type (or null string) :reader article-update-rendition-body))
+  ((title :initarg :title :type (or null string) :reader title)
+   (description :initarg :description :type (or null string) :reader description)
+   (body :initarg :body :type (or null string) :reader body))
   (:documentation "A representation of an article update rendition."))
 
 (defun make-article-update-rendition (title description body)
@@ -324,13 +384,10 @@
     (with-slots (title description) object
       (format stream ":title ~s :description ~s" title description))))
 
-;;;;;;;;;;;;;;
-;; comments ;;
-;;;;;;;;;;;;;;
-
+;;; comments
 (defclass comment (entity-mixin)
-  ((author :initarg :author :type profile :reader comment-author)
-   (body :initarg :body :type string :reader comment-body))
+  ((author :initarg :author :type profile :reader author)
+   (body :initarg :body :type string :reader body))
   (:documentation "A representation of a comment."))
 
 (defun make-comment (id author &key (body "") created-at updated-at)
@@ -355,7 +412,7 @@
   (print-unreadable-object (object stream :type t :identity t)
     (with-slots (id author) object
       (format stream ":id ~s :author-name ~s"
-              id (profile-username author)))))
+              id (username author)))))
 
 (defmethod jojo:%to-json ((object comment))
   (with-slots (id author body created-at updated-at) object
@@ -367,7 +424,7 @@
       (jojo:write-key-value "author" author))))
 
 (defclass comment-rendition ()
-  ((body :initarg :body :type string :reader comment-rendition-body))
+  ((body :initarg :body :type string :reader body))
   (:documentation "A representation of a comment rendition."))
 
 (defun make-comment-rendition (body)
