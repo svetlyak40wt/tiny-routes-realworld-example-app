@@ -11,17 +11,17 @@
 
 (in-package :conduit.services.profiles)
 
-(defun profile-by-username (id username)
-  (declare (ignore id))
+(defun profile-by-username (auth username)
+  (declare (ignore auth))
   (and username (make-profile username)))
 
-(defun profile-by-id (id)
-  (and id (make-profile "jruiz")))
+(defun profile-by-id (auth)
+  (and auth (make-profile "jruiz")))
 
-(defun follow-profile (id username)
-  (declare (ignore id))
+(defun follow-profile (auth username)
+  (declare (ignore auth))
   (and username (make-profile username :following t)))
 
-(defun unfollow-profile (id username)
-  (declare (ignore id))
+(defun unfollow-profile (auth username)
+  (declare (ignore auth))
   (and username (make-profile username :following nil)))

@@ -17,7 +17,9 @@
    :ironclad
    :jonathan
    :local-time
-   :tiny-routes)
+   :tiny-routes
+   :str
+   :closer-mop)
   :components
   ((:file "errors")
    (:file "util")

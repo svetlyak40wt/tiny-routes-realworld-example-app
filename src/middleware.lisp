@@ -28,8 +28,8 @@
            #:wrap-condition
            #:auth-get
            #:wrap-auth
-           #:query-params
-           #:wrap-query-params))
+           #:query-parameters
+           #:wrap-query-parameters))
 
 (in-package :conduit.middleware)
 
@@ -84,18 +84,16 @@
          (signal-validation-error "Missing Token"))
        (let* ((token (second (uiop:split-string authorization)))
               (claims (verify-auth-token token)))
-         (pipe request
-           (request-append :claims claims)
-           (request-append :token token)))))))
+         (request-append request :auth (append (list :token token) claims)))))))
 
 (defun wrap-auth (handler)
   ;; Wrap auth after path-info and HTTP method matching
   (wrap-post-match-middleware handler #'wrap-auth--internal))
 
-(defun query-params (request)
-  (request-get request :query-params))
+(defun query-parameters (request)
+  (request-get request :query-parameters))
 
-(defun parse-query-params (query-string)
+(defun parse-query-parameters (query-string)
   (let (params)
     (dolist (pair (uiop:split-string query-string :separator '(#\&)))
       (destructuring-bind (&optional key value &rest rest) (uiop:split-string pair :separator '(#\=))
@@ -104,9 +102,9 @@
           (push (intern key :keyword) params))))
     params))
 
-(defun wrap-query-params (handler)
+(defun wrap-query-parameters (handler)
   (wrap-request-mapper
    handler
    (lambda (request)
-     (let ((params (parse-query-params (query-string request))))
-       (request-append request :query-params params)))))
+     (let ((params (parse-query-parameters (query-string request))))
+       (request-append request :query-parameters params)))))

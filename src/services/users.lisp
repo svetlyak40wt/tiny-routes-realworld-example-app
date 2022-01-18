@@ -2,6 +2,8 @@
 (in-package :cl-user)
 (uiop:define-package :conduit.services.users
   (:use :cl :conduit.types)
+  (:import-from :conduit.util
+                #:with-options)
   (:import-from :conduit.auth
                 #:generate-auth-token
                 #:hash-encode-password)
@@ -32,18 +34,21 @@
            (token (generate-auth-token user)))
       (authenticate-user user token))))
 
-(defun current-user (id token)
-  (when (and id token)
-    (let* ((user (make-user id "test-user" "test@mail" (hash-encode-password "TEST"))))
-      (authenticate-user user token))))
+(defun current-user (auth)
+  (with-options (id token) auth
+    (when (and id token)
+      (let* ((user (make-user id "test-user" "test@mail" (hash-encode-password "TEST"))))
+        (authenticate-user user token)))))
 
-(defun update-user (id token rendition)
+(defun update-user (auth rendition)
   (check-type rendition user-update-rendition)
-  (with-slots (username email password bio image) rendition
-    (let* ((password-hash (hash-encode-password (or password "TEST")))
-           (user (make-user id
-                            (or username "test-user")
-                            (or email "test@mail")
-                            password-hash
-                            :bio bio :image image)))
-      (authenticate-user user token))))
+  (with-options (id token) auth
+    (when (and id token)
+      (with-slots (username email password bio image) rendition
+        (let* ((password-hash (hash-encode-password (or password "TEST")))
+               (user (make-user id
+                                (or username "test-user")
+                                (or email "test@mail")
+                                password-hash
+                                :bio bio :image image)))
+          (authenticate-user user token))))))

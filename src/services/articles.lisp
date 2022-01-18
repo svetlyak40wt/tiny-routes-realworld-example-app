@@ -28,20 +28,20 @@
   (let ((author (make-profile "jruiz")))
     (list (make-article 19 author slug "another title" "description" :body ""))))
 
-(defun article-feed (id)
-  (declare (ignore id))
+(defun article-feed (auth)
+  (declare (ignore auth))
   (let ((author (make-profile "jruiz")))
     (list (make-article 19 author "slug" "another title" "description" :body ""))))
 
-(defun create-article (id rendition)
-  (declare (ignore id))
+(defun create-article (auth rendition)
+  (declare (ignore auth))
   (with-slots (title description body tags) rendition
     (let ((author (make-profile "jruiz"))
           (slug (cl-slug:slugify title)))
       (make-article 21 author slug title description :body body :tags tags))))
 
-(defun update-article (id slug rendition)
-  (declare (ignore id slug))
+(defun update-article (auth slug rendition)
+  (declare (ignore auth slug))
   (with-slots (title description body) rendition
     (let* ((author (make-profile "jruiz"))
            (title (or title "def"))
@@ -50,8 +50,8 @@
                     (or description "some description")
                     :body (or body "some body")))))
 
-(defun delete-article (id slug)
-  (declare (ignore id))
+(defun delete-article (auth slug)
+  (declare (ignore auth))
   (let ((author (make-profile "jruiz")))
     (list (make-article 19 author slug "another title" "description" :body ""))))
 
