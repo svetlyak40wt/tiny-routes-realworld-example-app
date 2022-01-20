@@ -2,25 +2,9 @@
 (in-package :cl-user)
 (uiop:define-package :conduit.middleware
   (:use :cl)
-  (:import-from :conduit.errors
-                #:validation-error
-                #:signal-validation-error)
-  (:import-from :conduit.auth
-                #:verify-auth-token)
-  (:import-from :tiny-routes
-                #:request-get
-                #:request-header
-                #:request-body
-                #:request-append
-                #:pipe
-                #:wrap-request-body
-                #:wrap-request-mapper
-                #:wrap-response-mapper
-                #:wrap-response-content-type
-                #:wrap-response-body-mapper
-                #:wrap-post-match-middleware
-                #:bad-request
-                #:query-string)
+  (:local-nicknames (:errors :conduit.errors)
+                    (:log :conduit.logger)
+                    (:auth :conduit.auth))
   (:export #:error-response
            #:json-body
            #:wrap-request-json-body
@@ -42,22 +26,22 @@
   (list :|error| error-message))
 
 (defun json-body (request)
-  (request-get request :json-body))
+  (tiny:request-get request :json-body))
 
 (defun wrap-request-json-body (handler)
-  (wrap-request-body
-   (wrap-request-mapper
+  (tiny:wrap-request-body
+   (tiny:wrap-request-mapper
     handler
     (lambda (request)
-      (let* ((request-body (request-body request))
+      (let* ((request-body (tiny:request-body request))
              (json-body (jojo:parse request-body)))
-        (request-append request :json-body json-body))))))
+        (tiny:request-append request :json-body json-body))))))
 
 (defun wrap-response-json-body (handler)
-  (wrap-response-mapper
+  (tiny:wrap-response-mapper
    handler
    (lambda (response)
-     (pipe response
+     (tiny:pipe response
        (tiny:header-response :content-type "application/json")
        (tiny:body-mapper-response #'jojo:to-json)))))
 
@@ -65,33 +49,36 @@
   (lambda (request)
     (handler-case (funcall handler request)
       (jojo:<jonathan-error> ()
-        (bad-request (error-response "Unparsable JSON")))
-      (validation-error (c)
-        (bad-request (error-response (error-message c)))))))
+        (tiny:bad-request (error-response "Unparsable JSON")))
+      (errors:validation-error (c)
+        (tiny:bad-request (error-response (error-message c))))
+      (simple-error (c)
+        (log:error :middleware c)
+        (tiny:unprocessable-entity (error-response (format nil "~s" c)))))))
 
 (defun auth-get (request key &optional default)
-  (let ((claims (request-get request :claims)))
+  (let ((claims (tiny:request-get request :claims)))
     (getf claims key default)))
 
 (defun wrap-auth--internal (handler)
-  (wrap-request-mapper
+  (tiny:wrap-request-mapper
    handler
    (lambda (request)
-     (let ((authorization (request-header request "authorization")))
+     (let ((authorization (tiny:request-header request "authorization")))
        (unless authorization
-         (signal-validation-error "Missing authorization header"))
+         (errors:signal-validation-error "Missing authorization header"))
        (unless (uiop:string-prefix-p "Token " authorization)
-         (signal-validation-error "Missing Token"))
+         (errors:signal-validation-error "Missing Token"))
        (let* ((token (second (uiop:split-string authorization)))
-              (claims (verify-auth-token token)))
-         (request-append request :auth (append (list :token token) claims)))))))
+              (claims (auth:verify-auth-token token)))
+         (tiny:request-append request :auth (append (list :token token) claims)))))))
 
 (defun wrap-auth (handler)
   ;; Wrap auth after path-info and HTTP method matching
-  (wrap-post-match-middleware handler #'wrap-auth--internal))
+  (tiny:wrap-post-match-middleware handler #'wrap-auth--internal))
 
 (defun query-parameters (request)
-  (request-get request :query-parameters))
+  (tiny:request-get request :query-parameters))
 
 (defun parse-query-parameters (query-string)
   (let (params)
@@ -103,8 +90,8 @@
     params))
 
 (defun wrap-query-parameters (handler)
-  (wrap-request-mapper
+  (tiny:wrap-request-mapper
    handler
    (lambda (request)
-     (let ((params (parse-query-parameters (query-string request))))
-       (request-append request :query-parameters params)))))
+     (let ((params (parse-query-parameters (tiny:query-string request))))
+       (tiny:request-append request :query-parameters params)))))

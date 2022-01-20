@@ -2,8 +2,7 @@
 (in-package :cl-user)
 (uiop:define-package :conduit.validators
   (:use :cl)
-  (:import-from :conduit.errors
-                #:signal-validation-error)
+  (:local-nicknames (:errors :conduit.errors))
   (:export #:check-type*
            #:check-string
            #:check-integer
@@ -40,7 +39,7 @@
 
 (defun check-type* (value name type)
   (unless (typep value type)
-    (signal-validation-error "Value for `~a' must be of type ~a" name type))
+    (errors:signal-validation-error "Value for `~a' must be of type ~a" name type))
   value)
 
 (defun check-string (value name)
@@ -51,7 +50,7 @@
 
 (defun check-regex (value name regex)
   (unless (cl-ppcre:scan regex (check-string value name))
-    (signal-validation-error "Value for `~a' fails to match expected format" name))
+    (errors:signal-validation-error "Value for `~a' fails to match expected format" name))
   value)
 
 (defun check-length-between (value name min-length max-length)
@@ -60,8 +59,8 @@
   (let ((length (length value)))
     (when (or (< length min-length)
               (> length max-length))
-      (signal-validation-error "Value for `~a' must have length between ~d and ~d and has ~d"
-                               name min-length max-length length))
+      (errors:signal-validation-error "Value for `~a' must have length between ~d and ~d and has ~d"
+                                      name min-length max-length length))
     value))
 
 (defun check-string-length-between (value name min-length max-length)

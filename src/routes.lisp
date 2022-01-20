@@ -29,7 +29,7 @@
                 #:with-request
                 #:with-path-parameters
                 #:pipe)
-  (:export #:api-routes))
+  (:export #:app-routes))
 
 (in-package :conduit.routes)
 

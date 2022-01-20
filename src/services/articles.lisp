@@ -2,8 +2,7 @@
 (in-package :cl-user)
 (uiop:define-package :conduit.services.articles
   (:use :cl :conduit.types)
-  (:import-from :conduit.services.profiles
-                #:profile-by-id)
+  (:local-nicknames (:profiles :conduit.services.profiles))
   (:export #:get-articles
            #:article-by-slug
            #:article-feed
@@ -63,13 +62,13 @@
 
 (defun create-comment (id slug rendition)
   (declare (ignore slug))
-  (let ((author (profile-by-id id))
+  (let ((author (profiles:profile-by-id id))
         (body (body rendition)))
     (make-comment 103 author :body body)))
 
 (defun delete-comment (id slug comment-id)
   (declare (ignore slug))
-  (let ((author (profile-by-id id)))
+  (let ((author (profiles:profile-by-id id)))
     (make-comment comment-id author :body "Test")))
 
 (defun favorite-article (id slug)

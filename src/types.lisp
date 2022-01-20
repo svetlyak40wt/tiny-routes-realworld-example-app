@@ -2,9 +2,7 @@
 (in-package :cl-user)
 (uiop:define-package :conduit.types
   (:use :cl)
-  (:import-from :conduit.util
-                #:format-timestamp
-                #:parse-timestamp)
+  (:local-nicknames (:util :conduit.util))
   (:import-from :conduit.validators
                 #:check-username
                 #:check-email
@@ -91,7 +89,7 @@
    (image :initarg :image :type (or null string) :reader image))
   (:documentation "A representation of a user registration rendition."))
 
-(defun make-user-registration-rendition (username email password &optional bio image)
+(defun make-user-registration-rendition (username email password &key bio image)
   (make-instance 'user-registration-rendition
                  :username (check-username username)
                  :email (check-email email)
@@ -104,8 +102,8 @@
    (getf options :|username|)
    (getf options :|email|)
    (getf options :|password|)
-   (getf options :|bio|)
-   (getf options :|image|)))
+   :bio (getf options :|bio|)
+   :image (getf options :|image|)))
 
 (defmethod print-object ((object user-registration-rendition) stream)
   (print-unreadable-object (object stream :type t :identity t)
@@ -130,8 +128,8 @@
                    :password-hash password-hash
                    :bio bio
                    :image image
-                   :created-at (parse-timestamp created-at)
-                   :updated-at (parse-timestamp updated-at))))
+                   :created-at (util:parse-timestamp created-at)
+                   :updated-at (util:parse-timestamp updated-at))))
 
 (defun parse-user (options)
   (make-user
@@ -184,7 +182,7 @@
    (image :initarg :image :type (or null string) :reader image))
   (:documentation "A representation of a user update rendition."))
 
-(defun make-user-update-rendition (&optional username email password bio image)
+(defun make-user-update-rendition (&key username email password bio image)
   (make-instance 'user-update-rendition
                  :username (and username (check-username username))
                  :email (and email (check-email email))
@@ -194,11 +192,11 @@
 
 (defun parse-user-update-rendition (options)
   (make-user-update-rendition
-   (getf options :|username|)
-   (getf options :|email|)
-   (getf options :|password|)
-   (getf options :|bio|)
-   (getf options :|image|)))
+   :username (getf options :|username|)
+   :email (getf options :|email|)
+   :password (getf options :|password|)
+   :bio (getf options :|bio|)
+   :image (getf options :|image|)))
 
 (defmethod print-object ((object user-update-rendition) stream)
   (print-unreadable-object (object stream :type t :identity t)
@@ -267,8 +265,8 @@
                    :tags tags
                    :favorited favorited
                    :favorites-count favorites-count
-                   :created-at (parse-timestamp created-at)
-                   :updated-at (parse-timestamp updated-at))))
+                   :created-at (util:parse-timestamp created-at)
+                   :updated-at (util:parse-timestamp updated-at))))
 
 (defmethod print-object ((object article) stream)
   (print-unreadable-object (object stream :type t :identity t)
@@ -277,7 +275,7 @@
               id title (username author)))))
 
 (defmethod jojo:%to-json ((timestamp local-time:timestamp))
-  (jojo:%to-json (format-timestamp timestamp)))
+  (jojo:%to-json (util:format-timestamp timestamp)))
 
 (defmethod jojo:%to-json ((object article))
   (with-slots (slug title description body tags created-at updated-at
@@ -397,8 +395,8 @@
                    :id (check-id id)
                    :body (check-comment-body body)
                    :author (check-profile author "author")
-                   :created-at (parse-timestamp created-at)
-                   :updated-at (parse-timestamp updated-at))))
+                   :created-at (util:parse-timestamp created-at)
+                   :updated-at (util:parse-timestamp updated-at))))
 
 (defun parse-comment (options)
   (make-comment

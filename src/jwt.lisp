@@ -2,10 +2,8 @@
 (in-package :cl-user)
 (uiop:define-package :conduit.jwt
   (:use :cl)
-  (:import-from :conduit.errors
-                #:signal-validation-error)
-  (:import-from :conduit.util
-                #:unix-now)
+  (:local-nicknames (:errors :conduit.errors)
+                    (:util :conduit.util))
   (:export #:make-jwt
            #:parse-jwt
            #:verify-jwt))
@@ -47,7 +45,7 @@
   (destructuring-bind (&optional headers claims signature &rest rest)
       (uiop:split-string jwt :separator '(#\.))
     (unless (and headers claims signature (null rest))
-      (signal-validation-error "Unable to parse jwt: ~a" jwt))
+      (errors:signal-validation-error "Unable to parse jwt: ~a" jwt))
     (values
      (jojo:parse (base64-url-decode headers))
      (jojo:parse (base64-url-decode claims))
@@ -61,9 +59,9 @@
   (multiple-value-bind (headers claims signature message) (parse-jwt jwt)
     ;; 1) check signature
     (unless (equalp (hmac-sign key message) signature)
-      (signal-validation-error "Invalid jwt signature"))
+      (errors:signal-validation-error "Invalid jwt signature"))
     ;; 2) check the exp
     (let ((exp (getf headers :|exp|)))
-      (when (and exp (< exp (unix-now)))
-        (signal-validation-error "Expired jwt token")))
+      (when (and exp (< exp (util:unix-now)))
+        (errors:signal-validation-error "Expired jwt token")))
     (values claims headers)))

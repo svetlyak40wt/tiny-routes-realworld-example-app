@@ -2,11 +2,9 @@
 (in-package :cl-user)
 (uiop:define-package :conduit.auth
   (:use :cl :conduit.jwt)
-  (:import-from :conduit.types
-                #:id
-                #:user)
-  (:import-from :conduit.util
-                #:unix-now)
+  (:local-nicknames (:util :conduit.util)
+                    (:types :conduit.types))
+  (:import-from :bcrypt)
   (:export #:hash-encode-password
            #:valid-password-p
            #:generate-auth-token
@@ -28,10 +26,10 @@
   (bcrypt:password= password password-hash))
 
 (defun generate-auth-token (user)
-  (check-type user user)
+  (check-type user types:user)
   (let ((headers (list :|typ| "JWT" :|alg| "HS256"
-                       :|exp| (+ (unix-now) *auth-token-duration*)))
-        (claims (list :|id| (id user))))
+                       :|exp| (+ (util:unix-now) *auth-token-duration*)))
+        (claims (list :|id| (types:id user))))
     (make-jwt *key* headers claims)))
 
 (defun verify-auth-token (token)

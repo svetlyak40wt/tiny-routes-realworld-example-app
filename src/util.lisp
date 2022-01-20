@@ -2,9 +2,8 @@
 (in-package :cl-user)
 (uiop:define-package :conduit.util
   (:use :cl)
-  (:import-from #:local-time)
-  (:import-from #:alexandria
-                #:starts-with)
+  (:local-nicknames (:time :local-time)
+                    (:a :alexandria))
   (:export #:format-timestamp
            #:parse-timestamp
            #:unix-now
@@ -17,26 +16,27 @@
 
 (defun format-timestamp (timestamp)
   "Return an ISO-8601 formatted string representing TIMESTAMP."
-  (local-time:format-timestring nil timestamp :format local-time:+iso-8601-format+))
+  (time:format-timestring nil timestamp :format time:+iso-8601-format+))
 
 (defun parse-timestamp (timestamp-designator)
   "Return a timestamp corresponding to TIMESTAMP-DESIGNATOR."
   (typecase timestamp-designator
     (null nil)
-    (fixnum (local-time:universal-to-timestamp timestamp-designator))
-    (string (local-time:parse-timestring timestamp-designator))
+    (fixnum (time:universal-to-timestamp timestamp-designator))
+    (string (or (time:parse-timestring timestamp-designator :fail-on-error nil)
+                (time:parse-timestring timestamp-designator :fail-on-error nil :date-time-separator #\Space)))
     (otherwise timestamp-designator)))
 
 (defun unix-now ()
   "Return the current unix timestamp."
-  (local-time:timestamp-to-unix (local-time:now)))
+  (time:timestamp-to-unix (time:now)))
 
 (defun parse-boolean (boolean-designator)
   "Return a boolean corresponding to BOOLEAN-DESIGNATOR."
   (typecase boolean-designator
     (boolean boolean-designator)
     (fixnum (not (zerop boolean-designator)))
-    (string (starts-with #\t boolean-designator :test #'char= :key #'char-downcase))
+    (string (a:starts-with #\t boolean-designator :test #'char= :key #'char-downcase))
     (otherwise boolean-designator)))
 
 (defun keywordize (name)
@@ -80,7 +80,7 @@
   (let ((class (find-class class-name))
         (options (if wrapped-in
                      (parse-option-value options wrapped-in)
-                   options)))
+                     options)))
     (c2mop:ensure-finalized class)
     (apply #'make-instance class-name
            (loop for slot in (c2mop:class-slots class)

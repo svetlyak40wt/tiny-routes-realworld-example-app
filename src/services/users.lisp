@@ -2,11 +2,13 @@
 (in-package :cl-user)
 (uiop:define-package :conduit.services.users
   (:use :cl :conduit.types)
+  (:local-nicknames (:db :conduit.db)
+                    (:log :conduit.logger)
+                    (:auth :conduit.auth))
   (:import-from :conduit.util
                 #:with-options)
-  (:import-from :conduit.auth
-                #:generate-auth-token
-                #:hash-encode-password)
+  (:import-from :alexandria
+                #:when-let)
   (:export #:login
            #:register-user
            #:current-user
@@ -21,34 +23,35 @@
      :created-at created-at :updated-at updated-at)))
 
 (defun login (email password)
-  (when (and email password)
-    (let* ((user (make-user 10 "test-user" email (hash-encode-password password))))
-      (authenticate-user user (generate-auth-token user)))))
+  (log:info :users "Attempting to login user with email ~a" email)
+  (let ((user (and email password (db:user-by-email email))))
+    (cond ((null user)
+           (log:info :users "No such user for email ~a" email)
+           nil)
+          ((auth:valid-password-p password (password-hash user))
+           (log:info :users "Found user ~a" user)
+           (authenticate-user user (auth:generate-auth-token user)))
+          (t
+           (log:info :users "Invalid credentials for user ~a" email) nil))))
 
 (defun register-user (rendition)
   (check-type rendition user-registration-rendition)
-  (with-slots (username email password bio image) rendition
-    (let* ((password-hash (hash-encode-password password))
-           (user (make-user 11 username email password-hash
-                            :bio bio :image image))
-           (token (generate-auth-token user)))
-      (authenticate-user user token))))
+  (log:info :users "Attempting to register user via rendition ~a" rendition)
+  (when-let ((user (db:insert-user rendition)))
+    (log:info :users "Registered ~a" user)
+    (authenticate-user user (auth:generate-auth-token user))))
 
 (defun current-user (auth)
   (with-options (id token) auth
-    (when (and id token)
-      (let* ((user (make-user id "test-user" "test@mail" (hash-encode-password "TEST"))))
-        (authenticate-user user token)))))
+    (log:info :users "Attempting to get current user with id ~a" id)
+    (when-let ((user (db:user-by-id id)))
+      (log:info :users "Found current user ~a" user)
+      (authenticate-user user token))))
 
 (defun update-user (auth rendition)
   (check-type rendition user-update-rendition)
   (with-options (id token) auth
-    (when (and id token)
-      (with-slots (username email password bio image) rendition
-        (let* ((password-hash (hash-encode-password (or password "TEST")))
-               (user (make-user id
-                                (or username "test-user")
-                                (or email "test@mail")
-                                password-hash
-                                :bio bio :image image)))
-          (authenticate-user user token))))))
+    (log:info :users "Attempting to update user with id ~a" id)
+    (when-let ((user (db:update-user id rendition)))
+      (log:info :users "Updated user ~a" user)
+      (authenticate-user user token))))

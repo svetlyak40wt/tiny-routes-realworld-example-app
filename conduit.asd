@@ -19,14 +19,18 @@
    :local-time
    :tiny-routes
    :str
-   :closer-mop)
+   :closer-mop
+   :cl-dbi
+   :verbose)
   :components
-  ((:file "errors")
+  ((:file "logger")
+   (:file "errors")
    (:file "util")
    (:file "validators")
    (:file "types")
    (:file "jwt")
    (:file "auth")
+   (:file "db")
    (:module "services"
     :serial t
     :components ((:file "users")
