@@ -4,7 +4,7 @@
 
 ### [Demo](https://demo.realworld.io/)&nbsp;&nbsp;&nbsp;&nbsp;[RealWorld](https://github.com/gothinkster/realworld)
 
-This codebase was created to demonstrate a fully fledged fullstack application built with **[tiny-routes](https://github.com/jeko2000/tiny-routes)** including CRUD operations, authentication, routing, pagination, and more.
+This codebase was created to demonstrate a fully fledged backend application built with **[tiny-routes](https://github.com/jeko2000/tiny-routes)** including CRUD operations, authentication, routing, pagination, and more.
 
 We've gone to great lengths to adhere to the **[tiny-routes](https://github.com/jeko2000/tiny-routes)** community styleguides & best practices.
 
@@ -24,5 +24,30 @@ Then, start up your Common Lisp implementation, quick load the package, and star
 ```bash
 (ql:quickload :conduit)
 (conduit:start-app)
+```
+# Testing
+The server can be tested via the [realword Postman collection](https://github.com/gothinkster/realworld/blob/main/api/Conduit.postman_collection.json).
+
+For reference, this is the response as of version 0.1.0.
+```
+  ┌─────────────────────────┬───────────────────┬───────────────────┐
+  │                         │          executed │            failed │
+  ├─────────────────────────┼───────────────────┼───────────────────┤
+  │              iterations │                 1 │                 0 │
+  ├─────────────────────────┼───────────────────┼───────────────────┤
+  │                requests │                32 │                 0 │
+  ├─────────────────────────┼───────────────────┼───────────────────┤
+  │            test-scripts │                48 │                 0 │
+  ├─────────────────────────┼───────────────────┼───────────────────┤
+  │      prerequest-scripts │                18 │                 0 │
+  ├─────────────────────────┼───────────────────┼───────────────────┤
+  │              assertions │               331 │                 0 │
+  ├─────────────────────────┴───────────────────┴───────────────────┤
+  │ total run duration: 19.4s                                       │
+  ├─────────────────────────────────────────────────────────────────┤
+  │ total data received: 17.08kB (approx)                           │
+  ├─────────────────────────────────────────────────────────────────┤
+  │ average response time: 81ms [min: 5ms, max: 631ms, s.d.: 185ms] │
+  └─────────────────────────────────────────────────────────────────┘
 ```
 Enjoy!
