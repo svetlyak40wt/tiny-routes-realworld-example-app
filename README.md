@@ -1,7 +1,5 @@
 # ![CL tiny-routes RealWorld Example App](logo.png)
 
-#### *** Work in Progress ***
-
 ### [tiny-routes](https://github.com/jeko2000/tiny-routes) codebase containing real world examples (CRUD, auth, advanced patterns, etc) that adheres to the [RealWorld](https://github.com/gothinkster/realworld) spec and API.
 
 ### [Demo](https://demo.realworld.io/)&nbsp;&nbsp;&nbsp;&nbsp;[RealWorld](https://github.com/gothinkster/realworld)
@@ -12,10 +10,19 @@ We've gone to great lengths to adhere to the **[tiny-routes](https://github.com/
 
 For more information on how to this works with other frontends/backends, head over to the [RealWorld](https://github.com/gothinkster/realworld) repo.
 
-# How it works
+# Overview
 
-Once complete, this will be a [clack](https://github.com/fukamachi/clack) application built using [tiny-routes](https://github.com/jeko2000/tiny-routes) library.
+This is [clack](https://github.com/fukamachi/clack) application built using [tiny-routes](https://github.com/jeko2000/tiny-routes) library.
 
-# Getting started
+# Installation
+To install, first navigate to a directory where your [Quicklisp](https://www.quicklisp.org/beta/) installation expects local packages (e.g., ~/quicklisp/local-projects) and clone this repository as follows:
 
-TBD
+```bash
+git clone https://github.com/jeko2000/tiny-routes-realworld-example-app
+```
+Then, start up your Common Lisp implementation, quick load the package, and start the server.
+```bash
+(ql:quickload :conduit)
+(conduit:start-app)
+```
+Enjoy!
