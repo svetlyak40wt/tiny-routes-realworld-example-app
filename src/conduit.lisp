@@ -7,7 +7,12 @@
                     (:db :conduit.db)
                     (:routes :conduit.routes))
   (:import-from :clack)
-  (:export #:start-app))
+  (:export #:start-app
+           #:host
+           #:port
+           #:debug
+           #:db-path
+           #:secret))
 
 (in-package :conduit)
 
@@ -19,18 +24,16 @@
     (clack:stop *http-server*)
     (setf *http-server* nil)))
 
-(defun start-http-server (handler &optional port)
+(defun start-http-server (handler &key host port debug)
   (let ((port (or port 8080)))
     (stop-http-server)
     (setf *http-server*
-          (clack:clackup handler :port port))
+          (clack:clackup handler :address host :port port :debug debug))
     (log:info "Successfully initialized server on port ~a" port)))
 
-(defun start-app ()
+(defun start-app (&key (host "127.0.0.1") (port 8080) (debug t) (db-path "db/conduit.db") (secret "changeit"))
   (log:initialize-logger)
-  (auth:initialize-auth "to-be-replaced-with-secret-key-text")
-  (db:initialize-db (asdf:system-relative-pathname :conduit "db/conduit.db"))
-  (start-http-server routes:app-routes)
+  (auth:initialize-auth secret)
+  (db:initialize-db (asdf:system-relative-pathname :conduit db-path))
+  (start-http-server routes:app-routes :host host :port port :debug debug)
   t)
-
-(start-app)

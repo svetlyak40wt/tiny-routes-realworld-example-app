@@ -4,7 +4,7 @@
   :description "A reference backend implementation of the RealWorld example app leveraging Clack and tiny-routes."
   :author "Johnny Ruiz <johnny@ruiz-usa.com>"
   :license  "MIT"
-  :version "0.0.1"
+  :version "0.1.0"
   :pathname "src/"
   :serial t
   :depends-on
