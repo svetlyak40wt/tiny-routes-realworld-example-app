@@ -9,9 +9,11 @@
            #:json-body
            #:wrap-request-json-body
            #:wrap-response-json-body
+           #:wrap-logging
            #:wrap-condition
            #:auth-get
            #:wrap-auth
+           #:enforcep
            #:query-parameters
            #:wrap-query-parameters))
 
@@ -28,8 +30,18 @@
 (defun json-body (request)
   (tiny:request-get request :json-body))
 
+(defun wrap-request-body (handler)
+  (tiny:wrap-request-mapper
+   handler
+   (lambda (request)
+     (tiny:with-request (request-method raw-body) request
+       (let ((body (if (member request-method '(:patch :post :put))
+                       (tiny-routes.middleware::read-stream-to-string raw-body)
+                       "")))
+         (tiny:request-append request :request-body body))))))
+
 (defun wrap-request-json-body (handler)
-  (tiny:wrap-request-body
+  (wrap-request-body
    (tiny:wrap-request-mapper
     handler
     (lambda (request)
@@ -44,6 +56,17 @@
      (tiny:pipe response
        (tiny:header-response :content-type "application/json")
        (tiny:body-mapper-response #'jojo:to-json)))))
+
+(defun wrap-logging (handler)
+  (lambda (request)
+    (let ((start (get-internal-real-time)))
+      (tiny:with-request (request-method path-info request-body) request
+        (log:info :middleware "Handling HTTP ~a to ~s, body ~s" request-method path-info request-body)
+        (let* ((response (funcall handler request))
+               (duration (/ (- (get-internal-real-time) start) internal-time-units-per-second)))
+          (log:info :middleware "Handled HTTP ~a to ~s after ~fs with status ~a"
+                    request-method path-info duration (tiny:response-status response))
+          response)))))
 
 (defun wrap-condition (handler)
   (lambda (request)
@@ -60,22 +83,25 @@
   (let ((claims (tiny:request-get request :claims)))
     (getf claims key default)))
 
-(defun wrap-auth--internal (handler)
+(defun wrap-auth--internal (handler &optional (enforcep t))
   (tiny:wrap-request-mapper
    handler
    (lambda (request)
      (let ((authorization (tiny:request-header request "authorization")))
-       (unless authorization
-         (errors:signal-validation-error "Missing authorization header"))
-       (unless (uiop:string-prefix-p "Token " authorization)
-         (errors:signal-validation-error "Missing Token"))
-       (let* ((token (second (uiop:split-string authorization)))
-              (claims (auth:verify-auth-token token)))
-         (tiny:request-append request :auth (append (list :token token) claims)))))))
+       (cond ((null authorization)
+              (if enforcep
+                  (errors:signal-validation-error "Missing authorization header")
+                  request))
+             (t
+              (unless (uiop:string-prefix-p "Token " authorization)
+                (errors:signal-validation-error "Missing Token"))
+              (let* ((token (second (uiop:split-string authorization)))
+                     (claims (auth:verify-auth-token token)))
+                (tiny:request-append request :auth (append (list :token token) claims)))))))))
 
-(defun wrap-auth (handler)
+(defun wrap-auth (handler &optional (enforcep t))
   ;; Wrap auth after path-info and HTTP method matching
-  (tiny:wrap-post-match-middleware handler #'wrap-auth--internal))
+  (tiny:wrap-post-match-middleware handler #'(lambda (h) (wrap-auth--internal h enforcep))))
 
 (defun query-parameters (request)
   (tiny:request-get request :query-parameters))

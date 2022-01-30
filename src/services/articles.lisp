@@ -2,7 +2,13 @@
 (in-package :cl-user)
 (uiop:define-package :conduit.services.articles
   (:use :cl :conduit.types)
-  (:local-nicknames (:profiles :conduit.services.profiles))
+  (:local-nicknames (:db :conduit.db)
+                    (:log :conduit.logger)
+                    (:profiles :conduit.services.profiles))
+  (:import-from :conduit.util
+                #:with-options)
+  (:import-from :alexandria
+                #:when-let)
   (:export #:get-articles
            #:article-by-slug
            #:article-feed
@@ -18,68 +24,94 @@
 
 (in-package :conduit.services.articles)
 
-(defun get-articles (article-query)
-  (declare (ignore article-query))
-  (let ((author (make-profile "jruiz")))
-    (list (make-article 19 author "slug" "another title" "description" :body ""))))
-
 (defun article-by-slug (slug)
-  (let ((author (make-profile "jruiz")))
-    (list (make-article 19 author slug "another title" "description" :body ""))))
+  (log:info :articles "Attempting to find article by slug ~s" slug)
+  (when-let ((article (db:article-by-slug slug)))
+    (log:info :articles "Found article by slug ~a: ~a" slug article)
+    article))
 
-(defun article-feed (auth)
-  (declare (ignore auth))
-  (let ((author (make-profile "jruiz")))
-    (list (make-article 19 author "slug" "another title" "description" :body ""))))
+(defun get-articles (auth article-query)
+  (check-type article-query article-query)
+  (with-options ((user-id id)) auth
+    (log:info :articles "Attempting to get articles for user ~a via query ~a" user-id article-query)
+    (let ((articles (db:get-articles article-query user-id)))
+      articles)))
+
+(defun article-feed (auth feed-query)
+  (check-type feed-query feed-query)
+  (with-options ((user-id id)) auth
+    (log:info "Attempting to get feed articles for user ~a via query ~a" user-id feed-query)
+    (let ((articles (db:get-feed feed-query user-id)))
+      articles)))
 
 (defun create-article (auth rendition)
-  (declare (ignore auth))
-  (with-slots (title description body tags) rendition
-    (let ((author (make-profile "jruiz"))
-          (slug (cl-slug:slugify title)))
-      (make-article 21 author slug title description :body body :tags tags))))
+  (check-type rendition article-rendition)
+  (with-options ((user-id id)) auth
+    (log:info :articles "Attempting to create article for user ~a via rendition ~a" user-id rendition)
+    (when-let ((article (db:insert-article rendition user-id)))
+      (log:info :articles "Inserted article ~a" article)
+      article)))
 
 (defun update-article (auth slug rendition)
-  (declare (ignore auth slug))
-  (with-slots (title description body) rendition
-    (let* ((author (make-profile "jruiz"))
-           (title (or title "def"))
-           (slug (cl-slug:slugify title)))
-      (make-article 21 author slug title
-                    (or description "some description")
-                    :body (or body "some body")))))
+  (check-type rendition article-update-rendition)
+  (with-options ((user-id id)) auth
+    (log:info :articles "Attempting to update article ~a via rendition ~a for user ~a" slug rendition user-id)
+    (when-let ((article (db:update-article slug rendition user-id)))
+      (log:info :articles "Successfully updated article ~a" article)
+      article)))
 
 (defun delete-article (auth slug)
-  (declare (ignore auth))
-  (let ((author (make-profile "jruiz")))
-    (list (make-article 19 author slug "another title" "description" :body ""))))
+  (with-options ((user-id id)) auth
+    (log:info :articles "Attempting to delete article ~a for user ~a" slug user-id)
+    (when-let ((article (db:delete-article slug user-id)))
+      (log:info :articles "Successfully deleted article ~a" article)
+      article)))
 
-(defun get-comments-by-article-slug (slug)
-  (declare (ignore slug))
-  (let ((author (make-profile "somebody")))
-    (list (make-comment 101 author :body "Who said that?")
-          (make-comment 102 author :body "It was me!"))))
+(defun get-comments-by-article-slug (auth slug)
+  (with-options ((user-id id)) auth
+    (log:info :articles "Attempting to get comments for article ~a and user ~a" slug user-id)
+    (let ((comments (db:comments-by-article-slug slug user-id)))
+      comments)))
 
-(defun create-comment (id slug rendition)
-  (declare (ignore slug))
-  (let ((author (profiles:profile-by-id id))
-        (body (body rendition)))
-    (make-comment 103 author :body body)))
+(defun create-comment (auth slug rendition)
+  (check-type rendition comment-rendition)
+  (with-options ((user-id id)) auth
+    (log:info :articles "Attempting to create comment for article ~a via rendition ~a for user ~a"
+              slug rendition user-id)
+    (when-let ((comment (db:insert-comment slug rendition user-id)))
+      (log:info :articles "Successfully created comment ~a" comment)
+      comment)))
 
-(defun delete-comment (id slug comment-id)
-  (declare (ignore slug))
-  (let ((author (profiles:profile-by-id id)))
-    (make-comment comment-id author :body "Test")))
+(defun delete-comment (auth slug comment-id)
+  (with-options ((user-id id)) auth
+    (log:info :articles "Attempting to delete comment ~a in article ~a for user ~a"
+              comment-id slug user-id)
+    (when-let ((comment (db:delete-comment slug comment-id user-id)))
+      (log:info :articles "Successfully deleted comment ~a" comment)
+      comment)))
 
-(defun favorite-article (id slug)
-  (declare (ignore id))
-  (let ((author (make-profile "jruiz")))
-    (list (make-article 19 author slug "another title" "description" :body "" :favorited t))))
+(defun favorite-article (auth slug)
+  (with-options ((user-id id)) auth
+    (log:info :articles "Attempting to favorite article ~a for user ~a" slug user-id)
+    (when-let ((article (db:article-by-slug slug)))
+      (with-slots ((article-id id) favorited favorites-count) article
+        (db:favorite-article article-id user-id)
+        (setf favorited t)
+        (incf favorites-count))
+      article)))
 
-(defun unfavorite-article (id slug)
-  (declare (ignore id))
-  (let ((author (make-profile "jruiz")))
-    (list (make-article 19 author slug "another title" "description" :body "" :favorited nil))))
+(defun unfavorite-article (auth slug)
+  (with-options ((user-id id)) auth
+    (log:info :articles "Attempting to unfavorite article ~a for user ~a" slug user-id)
+    (when-let ((article (db:article-by-slug slug)))
+      (with-slots ((article-id id) favorited favorites-count) article
+        (db:unfavorite-article article-id user-id)
+        (setf favorited nil)
+        (decf favorites-count))
+      article)))
 
 (defun get-tags ()
-  (list "reactjs" "angularjs"))
+  (log:info :articles "Attempting to get tags")
+  (let ((tags (db:get-tags)))
+    (log:info :articles "Found tags")
+    tags))

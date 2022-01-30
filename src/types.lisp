@@ -3,20 +3,22 @@
 (uiop:define-package :conduit.types
   (:use :cl)
   (:local-nicknames (:util :conduit.util))
+  (:import-from :local-time)
   (:import-from :conduit.validators
+                #:check-type*
                 #:check-username
                 #:check-email
                 #:check-password
                 #:check-id
                 #:check-article-body
                 #:check-description
-                #:check-profile
                 #:check-slug
                 #:check-comment-body
                 #:check-title)
   (:export #:id
            #:created-at
-           #:updated-at
+           #:updated-at)
+  (:export #:authenticated-mixin
            #:token)
   (:export #:user-registration-rendition
            #:username
@@ -24,21 +26,12 @@
            #:password
            #:bio
            #:image
-           #:make-user-registration-rendition
-           #:parse-user-registration-rendition
            #:user
            #:password-hash
-           #:make-user
-           #:parse-user
            #:authenticated-user
-           #:make-authenticated-user
-           #:user-update-rendition
-           #:make-user-update-rendition
-           #:parse-user-update-rendition)
+           #:user-update-rendition)
   (:export #:profile
            #:following
-           #:make-profile
-           #:parse-profile
            #:article
            #:slug
            #:author
@@ -48,62 +41,56 @@
            #:tags
            #:favorited
            #:favorites-count
-           #:make-article
-           #:article-query
+           #:feed-query
            #:limit
            #:offset
-           #:make-article-query
-           #:parse-article-query
+           #:article-query
+           #:tag
+           #:favorited
            #:article-rendition
-           #:make-article-rendition
-           #:parse-article-rendition
-           #:article-update-rendition
-           #:make-article-update-rendition
-           #:parse-article-update-rendition)
+           #:article-update-rendition)
   (:export #:comment
-           #:make-comment
-           #:parse-comment
-           #:comment-rendition
-           #:make-comment-rendition
-           #:parse-comment-rendition))
+           #:comment-rendition))
 
 (in-package :conduit.types)
 
 ;;; mixins
 (defclass entity-mixin ()
-  ((id :initarg :id :type id :reader id)
-   (created-at :initarg :created-at :type timestamp :reader created-at)
-   (updated-at :initarg :updated-at :type timestamp :reader updated-at))
+  ((id :initarg :id :initarg :|id|
+                :type integer :reader id)
+   (created-at :initarg :created-at :initarg :|created_at|
+                        :type local-time:timestamp :reader created-at)
+   (updated-at :initarg :updated-at :initarg :|updated_at|
+                        :type local-time:timestamp :reader updated-at))
+  (:default-initargs :created-at (local-time:now) :updated-at (local-time:now))
   (:documentation "A mixin for identifiable entities."))
 
+(defmethod initialize-instance :after ((object entity-mixin) &key)
+  (with-slots (id created-at updated-at) object
+    (setf id (check-id id)
+          created-at (util:parse-timestamp created-at)
+          updated-at (util:parse-timestamp updated-at))))
+
 (defclass authenticated-mixin ()
-  ((token :initarg :token :type string :reader auth-token))
+  ((token :type string :reader token))
+  (:default-initargs :token "")
   (:documentation "A mixin for authenticated objects."))
 
 ;;; users
 (defclass user-registration-rendition ()
-  ((username :initarg :username :type string :reader username)
-   (email :initarg :email :type string :reader email)
-   (password :initarg :password :type string :reader password)
-   (bio :initarg :bio :type (or null string) :reader bio)
-   (image :initarg :image :type (or null string) :reader image))
+  ((username :initarg :username :initarg :|username| :type string :reader username)
+   (email :initarg :email :initarg :|email| :type string :reader email)
+   (password :initarg :password :initarg :|password| :type string :reader password)
+   (bio :initarg :bio :initarg :|bio| :type (or null string) :reader bio)
+   (image :initarg :image :initarg :|image| :type (or null string) :reader image))
+  (:default-initargs :bio nil :image nil)
   (:documentation "A representation of a user registration rendition."))
 
-(defun make-user-registration-rendition (username email password &key bio image)
-  (make-instance 'user-registration-rendition
-                 :username (check-username username)
-                 :email (check-email email)
-                 :password (check-password password)
-                 :bio bio
-                 :image image))
-
-(defun parse-user-registration-rendition (options)
-  (make-user-registration-rendition
-   (getf options :|username|)
-   (getf options :|email|)
-   (getf options :|password|)
-   :bio (getf options :|bio|)
-   :image (getf options :|image|)))
+(defmethod initialize-instance :after ((object user-registration-rendition) &key)
+  (with-slots (username email password) object
+    (setf username (check-username username)
+          email (check-email email)
+          password (check-password password))))
 
 (defmethod print-object ((object user-registration-rendition) stream)
   (print-unreadable-object (object stream :type t :identity t)
@@ -111,36 +98,21 @@
       (format stream ":username ~s :email ~s" username email))))
 
 (defclass user (entity-mixin)
-  ((username :initarg :username :type string :reader username)
-   (email :initarg :email :type string :reader email)
-   (password-hash :initarg :password-hash :type string :reader password-hash)
-   (bio :initarg :bio :initform nil :type (or null string) :reader bio)
-   (image :initarg :image :initform nil :type (or null string) :reader image))
+  ((id :initarg :|user_id|)
+   (username :initarg :username :initarg :|username| :type string :reader username)
+   (email :initarg :email :initarg :|email| :type string :reader email)
+   (password-hash :initarg :password-hash :initarg :|password_hash| :type string :reader password-hash)
+   (bio :initarg :bio :initarg :|bio| :type (or null string) :reader bio)
+   (image :initarg :image :initarg :|image| :type (or null string) :reader image)
+   (created-at :initarg :|user_created_at|)
+   (updated-at :initarg :|user_updated_at|))
+  (:default-initargs :bio nil :image nil)
   (:documentation "A representation of a user."))
 
-(defun make-user (id username email password-hash &key bio image created-at updated-at)
-  (let* ((created-at (or created-at (local-time:now)))
-         (updated-at (or updated-at created-at)))
-    (make-instance 'user
-                   :id (check-id id)
-                   :username (check-username username)
-                   :email (check-email email)
-                   :password-hash password-hash
-                   :bio bio
-                   :image image
-                   :created-at (util:parse-timestamp created-at)
-                   :updated-at (util:parse-timestamp updated-at))))
-
-(defun parse-user (options)
-  (make-user
-   (getf options :|id|)
-   (getf options :|username|)
-   (getf options :|email|)
-   (getf options :|password_hash|)
-   :bio (getf options :|bio|)
-   :image (getf options :|image|)
-   :created-at (getf options :|created_at|)
-   :updated-at (getf options :|updated_at|)))
+(defmethod initialize-instance :after ((object user) &key)
+  (with-slots (username email) object
+    (setf username (check-username username)
+          email (check-email email))))
 
 (defmethod print-object ((object user) stream)
   (print-unreadable-object (object stream :type t :identity t)
@@ -148,22 +120,8 @@
       (format stream ":id ~s :email ~s :username ~s" id email username))))
 
 (defclass authenticated-user (user authenticated-mixin)
-  ()
+  ((token :initarg :token :initarg :|token|))
   (:documentation "A representation of an authenticated user."))
-
-(defun make-authenticated-user (id token username email password-hash &key bio image created-at updated-at)
-  (let* ((created-at (or created-at (local-time:now)))
-         (updated-at (or updated-at created-at)))
-    (make-instance 'authenticated-user
-                   :id (check-id id)
-                   :token token
-                   :username (check-username username)
-                   :email (check-email email)
-                   :password-hash password-hash
-                   :bio bio
-                   :image image
-                   :created-at created-at
-                   :updated-at updated-at)))
 
 (defmethod jojo:%to-json ((object authenticated-user))
   (with-slots (email token username bio image) object
@@ -175,28 +133,19 @@
       (jojo:write-key-value "image" (or image :null)))))
 
 (defclass user-update-rendition ()
-  ((username :initarg :username :type (or null string) :reader username)
-   (email :initarg :email :type (or null string) :reader email)
-   (password :initarg :password :type (or null string) :reader password)
-   (bio :initarg :bio :type (or null string) :reader bio)
-   (image :initarg :image :type (or null string) :reader image))
+  ((username :initarg :username :initarg :|username| :type (or null string) :reader username)
+   (email :initarg :email :initarg :|email| :type (or null string) :reader email)
+   (password :initarg :password :initarg :|password| :type (or null string) :reader password)
+   (bio :initarg :bio :initarg :|bio| :type (or null string) :reader bio)
+   (image :initarg :image :initarg :|image| :type (or null string) :reader image))
+  (:default-initargs :username nil :email nil :password nil :bio nil :image nil)
   (:documentation "A representation of a user update rendition."))
 
-(defun make-user-update-rendition (&key username email password bio image)
-  (make-instance 'user-update-rendition
-                 :username (and username (check-username username))
-                 :email (and email (check-email email))
-                 :password (and password (check-password password))
-                 :bio bio
-                 :image image))
-
-(defun parse-user-update-rendition (options)
-  (make-user-update-rendition
-   :username (getf options :|username|)
-   :email (getf options :|email|)
-   :password (getf options :|password|)
-   :bio (getf options :|bio|)
-   :image (getf options :|image|)))
+(defmethod initialize-instance :after ((object user-update-rendition) &key)
+  (with-slots (username email password) object
+    (setf username (and username (check-username username))
+          email (and email (check-email email))
+          password (and password (check-password password)))))
 
 (defmethod print-object ((object user-update-rendition) stream)
   (print-unreadable-object (object stream :type t :identity t)
@@ -204,31 +153,26 @@
       (format stream ":username ~s :email ~s" username email))))
 
 ;;; profiles
-(defclass profile ()
-  ((username :initarg :username :type string :reader username)
-   (bio :initarg :bio :initform nil :type (or null string) :reader bio)
-   (image :initarg :image :initform nil :type (or null string) :reader image)
-   (following :initarg :following :initform nil :type boolean :reader following))
+(defclass profile (entity-mixin)
+  ((id :initarg :|profile_id|)
+   (username :initarg :username :initarg :|username| :type string :reader username)
+   (bio :initarg :bio :initarg :|bio| :type (or null string) :reader bio)
+   (image :initarg :image :initarg :|image| :type (or null string) :reader image)
+   (following :initarg :following :initarg :|following| :type boolean :accessor following)
+   (created-at :initarg :|profile_created_at|)
+   (updated-at :initarg :|profile_updated_at|))
+  (:default-initargs :bio nil :image nil :following nil)
   (:documentation "A representation of a profile."))
 
-(defun make-profile (username &key bio image following)
-  (make-instance 'profile
-                 :username (check-username username)
-                 :bio bio
-                 :image image
-                 :following following))
-
-(defun parse-profile (options)
-  (make-profile
-   (getf options :|username|)
-   :bio (getf options :|bio|)
-   :image (getf options :|image|)
-   :following (getf options :|following|)))
+(defmethod initialize-instance :after ((object profile) &key)
+  (with-slots (username following) object
+    (setf username (check-username username)
+          following (util:parse-boolean following))))
 
 (defmethod print-object ((object profile) stream)
   (print-unreadable-object (object stream :type t :identity t)
-    (with-slots (username) object
-      (format stream ":username ~s" username))))
+    (with-slots (username following) object
+      (format stream ":username ~s :following ~s" username following))))
 
 (defmethod jojo:%to-json ((object profile))
   (with-slots (username bio image following) object
@@ -240,33 +184,31 @@
 
 ;;; articles
 (defclass article (entity-mixin)
-  ((slug :initarg :slug :type string :reader slug)
-   (author :initarg :author :type profile :reader author)
-   (title :initarg :title :type string :reader title)
-   (description :initarg :description :type string :reader description)
-   (body :initarg :body :type string :reader body)
-   (tags :initarg :tags :type list :reader tags)
-   (favorited :initarg :favorited :initform nil :type boolean :reader favorited)
-   (favorites-count :initarg :favorites-count :initform 0 :type fixnum :reader favorites-count))
+  ((id :initarg :|article_id|)
+   (slug :initarg :slug :initarg :|slug| :type string :reader slug)
+   (author :initarg :author :initarg :|author| :type profile :accessor author)
+   (title :initarg :title :initarg :|title| :type string :reader title)
+   (description :initarg :description :initarg :|description| :type string :reader description)
+   (body :initarg :body :initarg :|body| :type string :reader body)
+   (tags :initarg :tags :initarg :|tags| :type list :reader tags)
+   (favorited :initarg :favorited :initarg :|favorited| :type boolean :reader favorited)
+   (favorites-count :initarg :favorites-count :initarg :|favorites_count| :type fixnum :accessor favorites-count)
+   (created-at :initarg :|article_created_at|)
+   (updated-at :initarg :|article_updated_at|))
+  (:default-initargs :body "" :tags () :favorited nil :favorites-count 0)
   (:documentation "A representation of an article."))
 
-(defun make-article (id author slug title description
-                     &key (body "") tags favorited (favorites-count 0)
-                       created-at updated-at)
-  (let* ((created-at (or created-at (local-time:now)))
-         (updated-at (or updated-at created-at)))
-    (make-instance 'article
-                   :id (check-id id)
-                   :author (check-profile author "author")
-                   :slug (check-slug slug)
-                   :title (check-title title)
-                   :description (check-description description)
-                   :body (check-article-body body)
-                   :tags tags
-                   :favorited favorited
-                   :favorites-count favorites-count
-                   :created-at (util:parse-timestamp created-at)
-                   :updated-at (util:parse-timestamp updated-at))))
+(defmethod initialize-instance :after ((object article) &rest initargs)
+  (unless (slot-boundp object 'author)
+    (setf (author object) (apply #'make-instance 'profile :allow-other-keys t initargs)))
+  (with-slots (author slug title description body tags favorited) object
+    (setf slug (check-slug slug)
+          author (check-type* author "author" 'profile)
+          title (check-title title)
+          description (check-description description)
+          body (check-article-body body)
+          tags (util:canonicalize-tags tags)
+          favorited(util:parse-boolean favorited))))
 
 (defmethod print-object ((object article) stream)
   (print-unreadable-object (object stream :type t :identity t)
@@ -293,29 +235,23 @@
       (jojo:write-key-value "favoritesCount" favorites-count)
       (jojo:write-key-value "author" author))))
 
-(defclass article-query ()
-  ((tag :initarg :tag :type (or null string) :reader tag)
-   (author :initarg :author :type (or null string) :reader author)
-   (favorited :initarg :favorited :type (or null string) :reader favorited)
-   (limit :initarg :limit :type fixnum :reader limit)
-   (offset :initarg :offset :type fixnum :reader offset))
-  (:documentation "A representation of an article query"))
+(defclass feed-query ()
+  ((limit :initarg :limit :initarg :|limit| :type fixnum :reader limit)
+   (offset :initarg :offset :initarg :|offset| :type fixnum :reader offset))
+  (:default-initargs :limit 20 :offset 0)
+  (:documentation "A representation of a feed query."))
 
-(defun make-article-query (&key tag author favorited (limit 20) (offset 0))
-  (make-instance 'article-query
-                 :tag tag
-                 :author author
-                 :favorited favorited
-                 :limit (or (and limit (parse-integer limit :junk-allowed t)) 20)
-                 :offset (or (and offset (parse-integer offset :junk-allowed t)) 0)))
+(defmethod print-object ((object feed-query) stream)
+  (print-unreadable-object (object stream :type t :identity t)
+    (with-slots (limit offset) object
+      (format stream ":limit ~d :offset ~d" limit offset))))
 
-(defun parse-article-query (options)
-  (make-article-query
-   :tag (getf options :|tag|)
-   :author (getf options :|author|)
-   :favorited (getf options :|favorited|)
-   :limit (getf options :|limit|)
-   :offset (getf options :|offset|)))
+(defclass article-query (feed-query)
+  ((tag :initarg :tag :initarg :|tag| :type (or null string) :reader tag)
+   (author :initarg :author :initarg :|author| :type (or null string) :reader author)
+   (favorited :initarg :favorited :initarg :|favorited| :type (or null string) :reader favorited))
+  (:default-initargs :tag nil :author nil :favorited nil)
+  (:documentation "A representation of an article query."))
 
 (defmethod print-object ((object article-query) stream)
   (print-unreadable-object (object stream :type t :identity t)
@@ -333,26 +269,19 @@
       (jojo:write-key-value "offset" offset))))
 
 (defclass article-rendition ()
-  ((title :initarg :title :type string :reader title)
-   (description :initarg :description :type string :reader description)
-   (body :initarg :body :type string :reader body)
-   (tags :initarg :tags :type string :reader tags))
+  ((title :initarg :title :initarg :|title| :type string :reader title)
+   (description :initarg :description :initarg :|description| :type string :reader description)
+   (body :initarg :body :initarg :|body| :type string :reader body)
+   (tags :initarg :tags :initarg :|tags| :initarg :|tagList| :type list :reader tags))
+  (:default-initargs :body "" :tags ())
   (:documentation "A representation of an article rendition."))
 
-(defun make-article-rendition (title description body tags)
-  (make-instance 'article-rendition
-                 :title (check-title title)
-                 :description (check-description description)
-                 :body (check-article-body body)
-                 :tags tags))
-
-(defun parse-article-rendition (options)
-  (make-article-rendition
-   (getf options :|title|)
-   (getf options :|description|)
-   (getf options :|body|)
-   (or (getf options :|tags|)
-       (getf options :|tagList|))))
+(defmethod initialize-instance :after ((object article-rendition) &key)
+  (with-slots (title description body tags) object
+    (setf title (check-title title)
+          description (check-description description)
+          body (check-article-body body)
+          tags (util:canonicalize-tags tags))))
 
 (defmethod print-object ((object article-rendition) stream)
   (print-unreadable-object (object stream :type t :identity t)
@@ -360,22 +289,17 @@
       (format stream ":title ~s :description ~s" title description))))
 
 (defclass article-update-rendition ()
-  ((title :initarg :title :type (or null string) :reader title)
-   (description :initarg :description :type (or null string) :reader description)
-   (body :initarg :body :type (or null string) :reader body))
+  ((title :initarg :title :initarg :|title| :type (or null string) :reader title)
+   (description :initarg :description :initarg :|description| :type (or null string) :reader description)
+   (body :initarg :body :initarg :|body| :type (or null string) :reader body))
+  (:default-initargs :title nil :description nil :body nil)
   (:documentation "A representation of an article update rendition."))
 
-(defun make-article-update-rendition (title description body)
-  (make-instance 'article-update-rendition
-                 :title (and title (check-title title))
-                 :description (and description (check-description description))
-                 :body (and body (check-article-body body))))
-
-(defun parse-article-update-rendition (options)
-  (make-article-update-rendition
-   (getf options :|title|)
-   (getf options :|description|)
-   (getf options :|body|)))
+(defmethod initialize-instance :after ((object article-update-rendition) &key)
+  (with-slots (title description body) object
+    (setf title (and title (check-title title))
+          description (and description (check-description description))
+          body (and body (check-article-body body)))))
 
 (defmethod print-object ((object article-update-rendition) stream)
   (print-unreadable-object (object stream :type t :identity t)
@@ -384,27 +308,20 @@
 
 ;;; comments
 (defclass comment (entity-mixin)
-  ((author :initarg :author :type profile :reader author)
-   (body :initarg :body :type string :reader body))
+  ((id :initarg :|comment_id|)
+   (author :initarg :author :initarg :|author| :type profile :accessor author)
+   (body :initarg :body :initarg :|body| :type string :reader body)
+   (created-at :initarg :|comment_created_at|)
+   (updated-at :initarg :|comment_updated_at|))
+  (:default-initargs :body "")
   (:documentation "A representation of a comment."))
 
-(defun make-comment (id author &key (body "") created-at updated-at)
-  (let* ((created-at (or created-at (local-time:now)))
-         (updated-at (or updated-at created-at)))
-    (make-instance 'comment
-                   :id (check-id id)
-                   :body (check-comment-body body)
-                   :author (check-profile author "author")
-                   :created-at (util:parse-timestamp created-at)
-                   :updated-at (util:parse-timestamp updated-at))))
-
-(defun parse-comment (options)
-  (make-comment
-   (getf options :|id|)
-   (getf options :|author|)
-   :body (getf options :|body|)
-   :created-at (getf options :|created_at|)
-   :updated-at (getf options :|updated_at|)))
+(defmethod initialize-instance :after ((object comment) &rest initargs)
+  (unless (slot-boundp object 'author)
+    (setf (author object) (apply #'make-instance 'profile :allow-other-keys t initargs)))
+  (with-slots (author body) object
+    (setf author (check-type* author "author" 'profile)
+          body (check-comment-body body))))
 
 (defmethod print-object ((object comment) stream)
   (print-unreadable-object (object stream :type t :identity t)
@@ -422,14 +339,13 @@
       (jojo:write-key-value "author" author))))
 
 (defclass comment-rendition ()
-  ((body :initarg :body :type string :reader body))
+  ((body :initarg :body :initarg :|body| :type string :reader body))
+  (:default-initargs :body "")
   (:documentation "A representation of a comment rendition."))
 
-(defun make-comment-rendition (body)
-  (make-instance 'comment-rendition :body (check-comment-body body)))
-
-(defun parse-comment-rendition (options)
-  (make-comment-rendition (getf options :|body|)))
+(defmethod initialize-instance :after ((object comment-rendition) &key)
+  (with-slots (body) object
+    (setf body (check-comment-body body))))
 
 (defmethod print-object ((object comment-rendition) stream)
   (print-unreadable-object (object stream :type t :identity t)

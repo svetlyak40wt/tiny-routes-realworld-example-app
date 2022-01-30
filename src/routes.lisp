@@ -7,7 +7,8 @@
                     (:profiles :conduit.services.profiles))
   (:import-from :conduit.util
                 #:with-json
-                #:decode-json-value)
+                #:decode-value
+                #:parse-integer-safely)
   (:import-from :uiop
                 #:if-let)
   (:import-from :conduit.middleware
@@ -18,7 +19,8 @@
                 #:wrap-response-json-body
                 #:wrap-condition
                 #:wrap-auth
-                #:wrap-query-parameters)
+                #:wrap-query-parameters
+                #:wrap-logging)
   (:import-from :tiny-routes
                 #:define-routes
                 #:define-route
@@ -46,6 +48,7 @@
   (tiny:unprocessable-entity (error-response body)))
 
 (define-routes public-user-routes
+  ;;; Authentication
   (define-post "/api/users/login" (request)
     (with-request (json-body) request
       (with-json (user) json-body
@@ -54,28 +57,32 @@
             (ok (list :|user| user))
             (forbidden "Invalid credentials"))))))
 
+  ;;; Registration
   (define-post "/api/users" (request)
     (with-request (json-body) request
-      (let ((rendition (decode-json-value json-body 'user-registration-rendition :wrapped-in :|user|)))
+      (let ((rendition (decode-value 'user-registration-rendition json-body :wrapped-in :|user|)))
         (if-let ((user (users:register-user rendition)))
           (ok (list :|user| user))
           (unprocessable-entity "Unable to register user"))))))
 
 (define-routes private-user-routes
+  ;;; Get current user
   (define-get "/api/user" (request)
     (with-request (auth) request
       (if-let ((user (users:current-user auth)))
         (ok (list :|user| user))
         (not-found "No such user found"))))
 
-  (define-put "/api/users" (request)
+  ;;; Update user
+  (define-put "/api/user" (request)
     (with-request (auth json-body) request
-      (let ((rendition (decode-json-value json-body 'user-update-rendition :wrapped-in :|user|)))
+      (let ((rendition (decode-value 'user-update-rendition json-body :wrapped-in :|user|)))
         (if-let ((updated-user (users:update-user auth rendition)))
           (ok (list :|user| updated-user))
           (unprocessable-entity "Unable to update user"))))))
 
-(define-routes public-profile-routes
+(define-routes public-or-private-profile-routes
+  ;;; Get profile
   (define-get "/api/profiles/:username" (request)
     (with-request (auth path-parameters) request
       (with-path-parameters (username) path-parameters
@@ -84,6 +91,7 @@
           (not-found "No such profile found"))))))
 
 (define-routes private-profile-routes
+  ;;; Follow user
   (define-post "/api/profiles/:username/follow" (request)
     (with-request (auth path-parameters) request
       (with-path-parameters (username) path-parameters
@@ -91,6 +99,7 @@
           (ok (list :|profile| profile))
           (not-found "No such profile found")))))
 
+  ;;; Unfollow user
   (define-delete "/api/profiles/:username/follow" (request)
     (with-request (auth path-parameters) request
       (with-path-parameters (username) path-parameters
@@ -106,67 +115,80 @@
           (ok (list :|article| article))
           (not-found "No such article found")))))
 
-  (define-get "/api/articles" (request)
-    (with-request (query-parameters) request
-      (let* ((article-query (parse-article-query query-parameters))
-             (articles (articles:get-articles article-query)))
-        (ok (list :|articles| articles :|article-query| article-query)))))
-
-  (define-get "/api/articles/:slug/comments" (request)
-    (with-request (path-parameters) request
-      (with-path-parameters (slug) path-parameters
-        (let ((comments (articles:get-comments-by-article-slug slug)))
-          (ok (list :|comments| comments))))))
-
   (define-get "/api/tags" ()
     (let ((tags (articles:get-tags)))
       (ok (list :|tags| tags)))))
 
-(define-routes private-article-routes
-  (define-get "/api/articles/feed" (request)
-    (with-request (auth) request
-      (let ((articles (articles:article-feed auth)))
-        (ok (list :|articles| articles)))))
+(define-routes public-or-provide-article-routes
+  ;;; List articles
+  (define-get "/api/articles" (request)
+    (with-request (auth query-parameters) request
+      (let* ((article-query (decode-value 'article-query query-parameters))
+             (articles (articles:get-articles auth article-query)))
+        (ok (list :|articles| articles :|articlesCount| (length articles))))))
 
-  (define-put "/api/articles/:slug" (request)
-    (with-request (auth path-parameters json-body) request
+  ;;; Get comments from an article
+  (define-get "/api/articles/:slug/comments" (request)
+    (with-request (auth path-parameters) request
       (with-path-parameters (slug) path-parameters
-        (let* ((rendition (decode-json-value json-body 'article-update-rendition :wrapped-in :|article|))
-               (article (articles:update-article auth slug rendition)))
-          (ok (list :|article| article))))))
+        (let ((comments (articles:get-comments-by-article-slug auth slug)))
+          (ok (list :|comments| comments)))))))
 
+(define-routes private-article-routes
+  ;;; Feed articles
+  (define-get "/api/articles/feed" (request)
+    (with-request (auth query-parameters) request
+      (let* ((feed-query (decode-value 'feed-query query-parameters))
+             (articles (articles:article-feed auth feed-query)))
+        (ok (list :|articles| articles :|articlesCount| (length articles))))))
+
+  ;;; Create article
   (define-post "/api/articles" (request)
     (with-request (auth json-body) request
-      (let* ((rendition (decode-json-value json-body 'article-rendition :wrapped-in :|article|))
+      (let* ((rendition (decode-value 'article-rendition json-body :wrapped-in :|article|))
              (article (articles:create-article auth rendition)))
         (ok (list :|article| article)))))
 
+  ;;; Update article
+  (define-put "/api/articles/:slug" (request)
+    (with-request (auth path-parameters json-body) request
+      (with-path-parameters (slug) path-parameters
+        (let* ((rendition (decode-value 'article-update-rendition json-body :wrapped-in :|article|))
+               (article (articles:update-article auth slug rendition)))
+          (ok (list :|article| article))))))
+
+  ;;; Delete article
   (define-delete "/api/articles/:slug" (request)
     (with-request (auth path-parameters) request
       (with-path-parameters (slug) path-parameters
         (let ((article (articles:delete-article auth slug)))
           (ok (list :|article| article))))))
 
+  ;;; Add comments to article
   (define-post "/api/articles/:slug/comments" (request)
     (with-request (auth path-parameters json-body) request
       (with-path-parameters (slug) path-parameters
-        (let* ((rendition (decode-json-value json-body 'comment-rendition :wrapped-in :|comment|))
+        (let* ((rendition (decode-value 'comment-rendition json-body :wrapped-in :|comment|))
                (comment (articles:create-comment auth slug rendition)))
           (ok (list :|comment| comment))))))
 
+  ;;; Delete comment
   (define-delete "/api/articles/:slug/comments/:comment-id" (request)
     (with-request (auth path-parameters) request
       (with-path-parameters (slug comment-id) path-parameters
-        (let ((comment (articles:delete-comment auth slug (parse-integer (string comment-id)))))
+        (let* ((comment-id (parse-integer-safely comment-id -1))
+               (comment (articles:delete-comment auth slug comment-id)))
           (ok (list :|comment| comment))))))
 
+  ;;; Favorite article
   (define-post "/api/articles/:slug/favorite" (request)
     (with-request (auth path-parameters) request
       (with-path-parameters (slug) path-parameters
         (let ((favorited-article (articles:favorite-article auth slug)))
           (ok (list :|article| favorited-article))))))
 
-  (define-post "/api/articles/:slug/unfavorite" (request)
+  ;;; Unfavorite article
+  (define-delete "/api/articles/:slug/favorite" (request)
     (with-request (auth path-parameters) request
       (with-path-parameters (slug) path-parameters
         (let ((unfavorited-article (articles:unfavorite-article auth slug)))
@@ -174,17 +196,20 @@
 
 (define-routes api-routes
   public-user-routes
-  public-profile-routes
+
+  (pipe public-or-private-profile-routes
+    (wrap-auth nil))
+  (pipe public-or-provide-article-routes
+    (wrap-auth nil))
 
   (pipe private-user-routes
-    (wrap-auth))
+    (wrap-auth t))
   (pipe private-profile-routes
-    (wrap-auth))
+    (wrap-auth t))
   (pipe private-article-routes
-    (wrap-auth))
+    (wrap-auth t))
 
-  (pipe public-article-routes
-    (wrap-query-parameters))
+  public-article-routes
 
   (define-route () (not-found "NOT_FOUND")))
 
@@ -192,4 +217,6 @@
   (pipe api-routes
     (wrap-request-json-body)
     (wrap-condition)
-    (wrap-response-json-body)))
+    (wrap-response-json-body)
+    (wrap-logging)
+    (wrap-query-parameters)))

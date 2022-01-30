@@ -2,7 +2,8 @@
 (in-package :cl-user)
 (uiop:define-package :conduit.auth
   (:use :cl :conduit.jwt)
-  (:local-nicknames (:util :conduit.util)
+  (:local-nicknames (:log :conduit.logger)
+                    (:util :conduit.util)
                     (:types :conduit.types))
   (:import-from :bcrypt)
   (:export #:hash-encode-password
@@ -37,4 +38,5 @@
 
 (defun initialize-auth (key)
   (check-type key string)
-  (setf *key* (ironclad:ascii-string-to-byte-array key)))
+  (setf *key* (ironclad:ascii-string-to-byte-array key))
+  (log:info :auth "Successfully initialize auth"))

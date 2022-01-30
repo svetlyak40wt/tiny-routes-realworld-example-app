@@ -8,9 +8,10 @@
            #:parse-timestamp
            #:unix-now
            #:parse-boolean
+           #:canonicalize-tags
            #:with-options
            #:with-json
-           #:decode-json-value))
+           #:decode-value))
 
 (in-package :conduit.util)
 
@@ -27,6 +28,14 @@
                 (time:parse-timestring timestamp-designator :fail-on-error nil :date-time-separator #\Space)))
     (otherwise timestamp-designator)))
 
+(defun parse-integer-safely (integer-designator &optional default)
+  (typecase integer-designator
+    (null default)
+    (integer integer-designator)
+    (string (handler-case (parse-integer integer-designator)
+              (error (condition) (values default condition))))
+    (otherwise integer-designator)))
+
 (defun unix-now ()
   "Return the current unix timestamp."
   (time:timestamp-to-unix (time:now)))
@@ -38,6 +47,12 @@
     (fixnum (not (zerop boolean-designator)))
     (string (a:starts-with #\t boolean-designator :test #'char= :key #'char-downcase))
     (otherwise boolean-designator)))
+
+(defun canonicalize-tags (tags-designator)
+  (let ((tags (etypecase tags-designator
+                (string (uiop:split-string tags-designator :separator '(#\,)))
+                (list tags-designator))))
+    (sort tags #'string<)))
 
 (defun keywordize (name)
   (intern (string name) :keyword))
@@ -76,14 +91,6 @@
 (defmacro with-json (vars json &body body)
   `(with-options ,vars ,json ,@body))
 
-(defun decode-json-value (options class-name &key wrapped-in)
-  (let ((class (find-class class-name))
-        (options (if wrapped-in
-                     (parse-option-value options wrapped-in)
-                     options)))
-    (c2mop:ensure-finalized class)
-    (apply #'make-instance class-name
-           (loop for slot in (c2mop:class-slots class)
-                 for name = (c2mop:slot-definition-name slot)
-                 collect (keywordize name)
-                 collect (parse-option-value options name)))))
+(defun decode-value (class options &key wrapped-in)
+  (let ((options (if wrapped-in (getf options wrapped-in) options)))
+    (apply #'make-instance class :allow-other-keys t options)))

@@ -20,14 +20,16 @@
     (setf *http-server* nil)))
 
 (defun start-http-server (handler &optional port)
-  (stop-http-server)
-  (setf *http-server*
-        (clack:clackup handler :port (or port 8080))))
+  (let ((port (or port 8080)))
+    (stop-http-server)
+    (setf *http-server*
+          (clack:clackup handler :port port))
+    (log:info "Successfully initialized server on port ~a" port)))
 
 (defun start-app ()
   (log:initialize-logger)
   (auth:initialize-auth "to-be-replaced-with-secret-key-text")
-  (db:initialize-db "conduit.db")
+  (db:initialize-db (asdf:system-relative-pathname :conduit "db/conduit.db"))
   (start-http-server routes:app-routes)
   t)
 

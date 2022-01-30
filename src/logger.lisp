@@ -39,4 +39,5 @@
   `(log-message :error ,datum ,@args))
 
 (defun initialize-logger ()
-  (setf v:*timestamp-format* *log-timestamp-format*))
+  (setf v:*timestamp-format* *log-timestamp-format*)
+  (info :logger "Successfully initialized logger"))

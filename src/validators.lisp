@@ -1,4 +1,4 @@
-;;;; validators.lisp
+ ;;;; validators.lisp
 (in-package :cl-user)
 (uiop:define-package :conduit.validators
   (:use :cl)
@@ -10,7 +10,6 @@
            #:check-username
            #:check-password
            #:check-id
-           #:check-profile
            #:check-slug
            #:check-title
            #:check-description
@@ -32,14 +31,14 @@
 (defparameter *article-description-max-length* 512)
 
 (defparameter *email-regex*
-  (cl-ppcre:create-scanner "^[a-z0-9.]+\@[a-z0-9.-]+$"))
+  (cl-ppcre:create-scanner "^[a-z0-9_.]+\@[a-z0-9.-]+$"))
 
 (defparameter *slug-regex*
   (cl-ppcre:create-scanner "^[A-Za-z0-9.-]{4,}"))
 
 (defun check-type* (value name type)
   (unless (typep value type)
-    (errors:signal-validation-error "Value for `~a' must be of type ~a" name type))
+    (errors:signal-validation-error "Value for `~a' must be of type ~a and found ~a" name type value))
   value)
 
 (defun check-string (value name)
@@ -78,9 +77,6 @@
 
 (defun check-id (value &optional (name "id"))
   (check-integer value name))
-
-(defun check-profile (value &optional (name "profile"))
-  (check-type* value name 'profile))
 
 (defun check-slug (value &optional (name "slug"))
   (check-regex value name *slug-regex*))
