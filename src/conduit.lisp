@@ -34,6 +34,7 @@
 (defun start-app (&key (host "127.0.0.1") (port 8080) (debug t) (db-path "db/conduit.db") (secret "changeit"))
   (log:initialize-logger)
   (auth:initialize-auth secret)
-  (db:initialize-db (asdf:system-relative-pathname :conduit db-path))
+  (db:initialize-db
+   (ensure-directories-exist (asdf:system-relative-pathname :conduit db-path)))
   (start-http-server routes:app-routes :host host :port port :debug debug)
   t)
