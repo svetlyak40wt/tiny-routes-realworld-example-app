@@ -34,9 +34,10 @@
   (tiny:wrap-request-mapper
    handler
    (lambda (request)
-     (tiny:with-request (request-method raw-body) request
+     (tiny:with-request (request-method raw-body content-length) request
        (let ((body (if (member request-method '(:patch :post :put))
-                       (tiny-routes.middleware::read-stream-to-string raw-body)
+                       (tiny-routes.middleware::read-stream-to-string raw-body
+                                                                      content-length)
                        "")))
          (tiny:request-append request :request-body body))))))
 
