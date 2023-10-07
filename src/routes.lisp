@@ -49,7 +49,7 @@
 
 (define-routes public-user-routes
   ;;; Authentication
-  (define-post "/api/users/login" (request)
+  (define-post "/users/login" (request)
     (with-request (json-body) request
       (with-json (user) json-body
         (with-json (email password) user
@@ -58,7 +58,7 @@
             (forbidden "Invalid credentials"))))))
 
   ;;; Registration
-  (define-post "/api/users" (request)
+  (define-post "/users" (request)
     (with-request (json-body) request
       (let ((rendition (decode-value 'user-registration-rendition json-body :wrapped-in :|user|)))
         (if-let ((user (users:register-user rendition)))
@@ -67,14 +67,14 @@
 
 (define-routes private-user-routes
   ;;; Get current user
-  (define-get "/api/user" (request)
+  (define-get "/user" (request)
     (with-request (auth) request
       (if-let ((user (users:current-user auth)))
         (ok (list :|user| user))
         (not-found "No such user found"))))
 
   ;;; Update user
-  (define-put "/api/user" (request)
+  (define-put "/user" (request)
     (with-request (auth json-body) request
       (let ((rendition (decode-value 'user-update-rendition json-body :wrapped-in :|user|)))
         (if-let ((updated-user (users:update-user auth rendition)))
@@ -83,7 +83,7 @@
 
 (define-routes public-or-private-profile-routes
   ;;; Get profile
-  (define-get "/api/profiles/:username" (request)
+  (define-get "/profiles/:username" (request)
     (with-request (auth path-parameters) request
       (with-path-parameters (username) path-parameters
         (if-let ((profile (profiles:profile-by-username auth username)))
@@ -92,7 +92,7 @@
 
 (define-routes private-profile-routes
   ;;; Follow user
-  (define-post "/api/profiles/:username/follow" (request)
+  (define-post "/profiles/:username/follow" (request)
     (with-request (auth path-parameters) request
       (with-path-parameters (username) path-parameters
         (if-let ((profile (profiles:follow-profile auth username)))
@@ -100,7 +100,7 @@
           (not-found "No such profile found")))))
 
   ;;; Unfollow user
-  (define-delete "/api/profiles/:username/follow" (request)
+  (define-delete "/profiles/:username/follow" (request)
     (with-request (auth path-parameters) request
       (with-path-parameters (username) path-parameters
         (if-let ((profile (profiles:unfollow-profile auth username)))
@@ -108,27 +108,27 @@
           (not-found "No such profile found"))))))
 
 (define-routes public-article-routes
-  (define-get "/api/articles/:slug" (request)
+  (define-get "/articles/:slug" (request)
     (with-request (path-parameters) request
       (with-path-parameters (slug) path-parameters
         (if-let ((article (articles:article-by-slug slug)))
           (ok (list :|article| article))
           (not-found "No such article found")))))
 
-  (define-get "/api/tags" ()
+  (define-get "/tags" ()
     (let ((tags (articles:get-tags)))
       (ok (list :|tags| tags)))))
 
 (define-routes public-or-provide-article-routes
   ;;; List articles
-  (define-get "/api/articles" (request)
+  (define-get "/articles" (request)
     (with-request (auth query-parameters) request
       (let* ((article-query (decode-value 'article-query query-parameters))
              (articles (articles:get-articles auth article-query)))
         (ok (list :|articles| articles :|articlesCount| (length articles))))))
 
   ;;; Get comments from an article
-  (define-get "/api/articles/:slug/comments" (request)
+  (define-get "/articles/:slug/comments" (request)
     (with-request (auth path-parameters) request
       (with-path-parameters (slug) path-parameters
         (let ((comments (articles:get-comments-by-article-slug auth slug)))
@@ -136,21 +136,21 @@
 
 (define-routes private-article-routes
   ;;; Feed articles
-  (define-get "/api/articles/feed" (request)
+  (define-get "/articles/feed" (request)
     (with-request (auth query-parameters) request
       (let* ((feed-query (decode-value 'feed-query query-parameters))
              (articles (articles:article-feed auth feed-query)))
         (ok (list :|articles| articles :|articlesCount| (length articles))))))
 
   ;;; Create article
-  (define-post "/api/articles" (request)
+  (define-post "/articles" (request)
     (with-request (auth json-body) request
       (let* ((rendition (decode-value 'article-rendition json-body :wrapped-in :|article|))
              (article (articles:create-article auth rendition)))
         (ok (list :|article| article)))))
 
   ;;; Update article
-  (define-put "/api/articles/:slug" (request)
+  (define-put "/articles/:slug" (request)
     (with-request (auth path-parameters json-body) request
       (with-path-parameters (slug) path-parameters
         (let* ((rendition (decode-value 'article-update-rendition json-body :wrapped-in :|article|))
@@ -158,14 +158,14 @@
           (ok (list :|article| article))))))
 
   ;;; Delete article
-  (define-delete "/api/articles/:slug" (request)
+  (define-delete "/articles/:slug" (request)
     (with-request (auth path-parameters) request
       (with-path-parameters (slug) path-parameters
         (let ((article (articles:delete-article auth slug)))
           (ok (list :|article| article))))))
 
   ;;; Add comments to article
-  (define-post "/api/articles/:slug/comments" (request)
+  (define-post "/articles/:slug/comments" (request)
     (with-request (auth path-parameters json-body) request
       (with-path-parameters (slug) path-parameters
         (let* ((rendition (decode-value 'comment-rendition json-body :wrapped-in :|comment|))
@@ -173,7 +173,7 @@
           (ok (list :|comment| comment))))))
 
   ;;; Delete comment
-  (define-delete "/api/articles/:slug/comments/:comment-id" (request)
+  (define-delete "/articles/:slug/comments/:comment-id" (request)
     (with-request (auth path-parameters) request
       (with-path-parameters (slug comment-id) path-parameters
         (let* ((comment-id (parse-integer-safely comment-id -1))
@@ -181,14 +181,14 @@
           (ok (list :|comment| comment))))))
 
   ;;; Favorite article
-  (define-post "/api/articles/:slug/favorite" (request)
+  (define-post "/articles/:slug/favorite" (request)
     (with-request (auth path-parameters) request
       (with-path-parameters (slug) path-parameters
         (let ((favorited-article (articles:favorite-article auth slug)))
           (ok (list :|article| favorited-article))))))
 
   ;;; Unfavorite article
-  (define-delete "/api/articles/:slug/favorite" (request)
+  (define-delete "/articles/:slug/favorite" (request)
     (with-request (auth path-parameters) request
       (with-path-parameters (slug) path-parameters
         (let ((unfavorited-article (articles:unfavorite-article auth slug)))
