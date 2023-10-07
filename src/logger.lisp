@@ -3,7 +3,13 @@
 (uiop:define-package :conduit.logger
   (:use :cl)
   (:shadow #:error #:warn #:debug)
-  (:import-from :verbose)
+  ;; nickname v was removed from verbose and
+  ;; verbose package was renamed to org.shirakumo.verbose
+  ;; https://github.com/Shinmera/verbose/commit/356f362d7385b72cd3fad75d2b8d14834a74f8da
+  ;; (:import-from :verbose)
+  
+  (:local-nicknames (#:v #:org.shirakumo.verbose))
+
   (:export #:debug
            #:info
            #:warn
